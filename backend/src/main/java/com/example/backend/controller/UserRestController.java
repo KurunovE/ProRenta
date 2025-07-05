@@ -29,7 +29,7 @@ public class UserRestController {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/id/{id}")
     public ResponseEntity<User> findById(@PathVariable Long id) {
         var user = userService.findById(id);
         return (user != null) ?
