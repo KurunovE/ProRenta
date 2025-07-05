@@ -6,6 +6,8 @@ import com.example.backend.service.UserService;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+
 @Service
 @AllArgsConstructor
 public class UserServiceImpl implements UserService {
@@ -32,7 +34,32 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public User update(User user) {
+        Optional<User> userOptional = Optional.ofNullable(userRepository.findByEmail(user.getEmail()));
+        if (userOptional.isPresent()) {
+            var newUser = userOptional.get();
+            newUser.setUsername(user.getUsername());
+            newUser.setPassword(user.getPassword());
+            newUser.setDeposits(user.getDeposits());
+            return userRepository.save(newUser);
+        } else {
+            throw new RuntimeException("User not found");
+        }
+    }
+
+    @Override
     public void deleteById(Long id) {
         userRepository.delete(findById(id));
     }
+
+    @Override
+    public Boolean exist(User user) {
+        return userRepository.findByEmail(user.getEmail()) != null;
+    }
+
+    @Override
+    public Boolean existsById(Long id) {
+        return userRepository.existsById(id);
+    }
+
 }
