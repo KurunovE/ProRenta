@@ -52,6 +52,7 @@ public class UserRestController {
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
                     .body(Map.of(
+                            "status", 400,
                             "error", "Bad Request",
                             "message", "Incorrect format id"
                     ));
@@ -62,6 +63,7 @@ public class UserRestController {
                 ResponseEntity
                         .status(HttpStatus.NOT_FOUND)
                         .body(Map.of(
+                                "status", 404,
                                 "error", "Not found",
                                 "message", "User not found"
                         ));
@@ -73,6 +75,7 @@ public class UserRestController {
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
                     .body(Map.of(
+                            "status", 400,
                             "error", "Bad Request",
                             "message", "Incorrect format email"
                     ));
@@ -83,6 +86,7 @@ public class UserRestController {
                 ResponseEntity
                         .status(HttpStatus.NOT_FOUND)
                         .body(Map.of(
+                                "status", 404,
                                 "error", "Not found",
                                 "message", "User not found"
                         ));
@@ -94,6 +98,7 @@ public class UserRestController {
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
                     .body(Map.of(
+                            "status", 400,
                             "error", "Bad Request",
                             "message", "Incorrect format username"
                     ));
@@ -104,6 +109,7 @@ public class UserRestController {
                 ResponseEntity
                         .status(HttpStatus.NOT_FOUND)
                         .body(Map.of(
+                                "status", 404,
                                 "error", "Not found",
                                 "message", "User not found"
                         ));
@@ -120,6 +126,7 @@ public class UserRestController {
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
                     .body(Map.of(
+                            "status", 400,
                             "error", "Bad request",
                             "message", "Incorrect data: " + e.getMessage()
                     ));
@@ -127,6 +134,7 @@ public class UserRestController {
             return ResponseEntity
                     .status(HttpStatus.CONFLICT)
                     .body(Map.of(
+                            "status", 409,
                             "error", "Duplicate entry",
                             "message","A user with such an email already exists"
                     ));
@@ -135,6 +143,7 @@ public class UserRestController {
             return ResponseEntity
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of(
+                            "status", 500,
                             "error","Internal Server Error",
                             "message","Internal server error"
                     ));
@@ -147,6 +156,7 @@ public class UserRestController {
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
                     .body(Map.of(
+                            "status", 400,
                             "error", "Bad request",
                             "message", "Incorrect user"
                     ));
@@ -161,6 +171,7 @@ public class UserRestController {
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
                     .body(Map.of(
+                            "status", 400,
                             "error", "Bad request",
                             "message", "Incorrect format id"
                     ));
@@ -170,12 +181,13 @@ public class UserRestController {
             return ResponseEntity
                     .status(HttpStatus.OK)
                     .body(Map.of(
-                            "status", "OK",
+                            "status", 200,
                             "message", "User deleted"));
         }
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
                 .body(Map.of(
+                        "status", 404,
                         "error", "Not found",
                         "message", "User not found"
                 ));
