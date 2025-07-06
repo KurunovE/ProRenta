@@ -8,6 +8,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/v1/user")
 @AllArgsConstructor
@@ -16,48 +18,80 @@ public class UserRestController {
     private UserService userService;
 
     @GetMapping
-    public ResponseEntity<User> findUser(@RequestParam(value = "id", required = false) Long id,
+    public ResponseEntity<?> findUser(@RequestParam(value = "id", required = false) Long id,
                                    @RequestParam(value = "email", required = false) String email,
                                    @RequestParam(value = "username", required = false) String username) {
+        User user;
         if (id != null) {
-            return ResponseEntity.ok(userService.findById(id));
+            user = userService.findById(id);
         } else if (email != null) {
-            return ResponseEntity.ok(userService.findByEmail(email));
+            user = userService.findByEmail(email);
         } else if (username != null) {
-            return ResponseEntity.ok(userService.findByUsername(username));
+            user = userService.findByUsername(username);
+        } else {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Incorrect parameters"));
         }
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        return (user != null) ?
+                ResponseEntity.ok(user) :
+                ResponseEntity
+                        .status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("message", "User not found"));
     }
 
     @GetMapping("/id/{id}")
-    public ResponseEntity<User> findById(@PathVariable Long id) {
+    public ResponseEntity<?> findById(@PathVariable Long id) {
+        if (id == null) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Incorrect format id"));
+        }
         var user = userService.findById(id);
         return (user != null) ?
                 ResponseEntity.ok(user) :
-                ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+                ResponseEntity
+                        .status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("message", "User not found"));
     }
 
     @GetMapping("/email/{email}")
-    public ResponseEntity<User> findByEmail(@PathVariable String email) {
+    public ResponseEntity<?> findByEmail(@PathVariable String email) {
+        if (email == null) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Incorrect format email"));
+        }
         var user = userService.findByEmail(email);
         return (user != null) ?
                 ResponseEntity.ok(user) :
-                ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+                ResponseEntity
+                        .status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("message", "User not found"));
     }
 
     @GetMapping("/username/{username}")
-    public ResponseEntity<User> findByUsername(@PathVariable String username) {
+    public ResponseEntity<?> findByUsername(@PathVariable String username) {
+        if (username == null) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Incorrect format username"));
+        }
         var user = userService.findByUsername(username);
         return (user != null) ?
                 ResponseEntity.ok(user) :
-                ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+                ResponseEntity
+                        .status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("message", "User not found"));
     }
 
     @PostMapping("/save")
     public ResponseEntity<?> save(@RequestBody User user) {
         try {
             User savedUser = userService.save(user);
-            return ResponseEntity.status(HttpStatus.CREATED).body(savedUser);
+            return ResponseEntity
+                    .status(HttpStatus.CREATED)
+                    .body(savedUser);
         } catch (IllegalArgumentException e) {
             return ResponseEntity
                     .badRequest()
@@ -75,17 +109,31 @@ public class UserRestController {
     }
 
     @PutMapping("/update")
-    public ResponseEntity<User> update(@RequestBody User user) {
+    public ResponseEntity<?> update(@RequestBody User user) {
+        if (user == null) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Incorrect user"));
+        }
         User updatedUser = userService.update(user);
         return ResponseEntity.ok(updatedUser);
     }
 
     @DeleteMapping("/delete")
-    public ResponseEntity<Void> deleteById(@RequestParam("id") Long id) {
+    public ResponseEntity<?> deleteById(@RequestParam("id") Long id) {
+        if (id == null) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Incorrect format id"));
+        }
         if (userService.existsById(id)) {
             userService.deleteById(id);
-            return ResponseEntity.status(HttpStatus.OK).build();
+            return ResponseEntity
+                    .status(HttpStatus.OK)
+                    .body(Map.of("message", "User deleted"));
         }
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(Map.of("message", "User not found"));
     }
 }
