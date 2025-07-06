@@ -32,6 +32,7 @@ public class UserRestController {
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
                     .body(Map.of(
+                            "status", 400,
                             "error", "Bad Request",
                             "message", "Incorrect parameters"
                     ));
@@ -41,6 +42,7 @@ public class UserRestController {
                 ResponseEntity
                         .status(HttpStatus.NOT_FOUND)
                         .body(Map.of(
+                                "status", 404,
                                 "error", "Not found",
                                 "message", "User not found"
                         ));
