@@ -2,8 +2,7 @@ package com.example.backend.controller;
 
 import com.example.backend.model.user.User;
 import com.example.backend.service.UserService;
-import lombok.AllArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,10 +11,10 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/user")
-@AllArgsConstructor
-public class UserRestController {
+@RequiredArgsConstructor
+public class UserController {
 
-    private UserService userService;
+    private final UserService userService;
 
     @GetMapping
     public ResponseEntity<?> findUser(@RequestParam(value = "id", required = false) Long id,
@@ -115,41 +114,6 @@ public class UserRestController {
                                 "error", "Not found",
                                 "message", "User not found"
                         ));
-    }
-
-    @PostMapping("/save")
-    public ResponseEntity<?> save(@RequestBody User user) {
-        try {
-            User savedUser = userService.save(user);
-            return ResponseEntity
-                    .status(HttpStatus.CREATED)
-                    .body(savedUser);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of(
-                            "status", 400,
-                            "error", "Bad request",
-                            "message", "Incorrect data: " + e.getMessage()
-                    ));
-        } catch (DataIntegrityViolationException e) {
-            return ResponseEntity
-                    .status(HttpStatus.CONFLICT)
-                    .body(Map.of(
-                            "status", 409,
-                            "error", "Duplicate entry",
-                            "message","A user with such an email already exists"
-                    ));
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(
-                            "status", 500,
-                            "error","Internal Server Error",
-                            "message","Internal server error"
-                    ));
-        }
     }
 
     @PutMapping("/update")

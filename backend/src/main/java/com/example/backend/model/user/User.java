@@ -1,7 +1,6 @@
 package com.example.backend.model.user;
 
 import com.example.backend.model.deposit.Deposit;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -12,7 +11,7 @@ import java.util.List;
 @Data
 public class User {
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
     private String username;
@@ -20,7 +19,6 @@ public class User {
     @Column(unique = true)
     private String email;
 
-    @JsonIgnore
     @Column(unique = true)
     private String password;
 

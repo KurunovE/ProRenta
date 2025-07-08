@@ -4,6 +4,7 @@ import com.example.backend.model.user.User;
 import com.example.backend.repository.UserRepository;
 import com.example.backend.service.UserService;
 import lombok.AllArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -11,7 +12,9 @@ import java.util.Optional;
 @Service
 @AllArgsConstructor
 public class UserServiceImpl implements UserService {
+
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public User findById(Long id) {
@@ -29,7 +32,8 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User save(User user) {
+    public User registration(User user) {
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
         return userRepository.save(user);
     }
 
@@ -39,7 +43,7 @@ public class UserServiceImpl implements UserService {
         if (userOptional.isPresent()) {
             var newUser = userOptional.get();
             newUser.setUsername(user.getUsername());
-            newUser.setPassword(user.getPassword());
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
             newUser.setDeposits(user.getDeposits());
             return userRepository.save(newUser);
         } else {
@@ -50,11 +54,6 @@ public class UserServiceImpl implements UserService {
     @Override
     public void deleteById(Long id) {
         userRepository.delete(findById(id));
-    }
-
-    @Override
-    public Boolean exist(User user) {
-        return userRepository.findByEmail(user.getEmail()) != null;
     }
 
     @Override
