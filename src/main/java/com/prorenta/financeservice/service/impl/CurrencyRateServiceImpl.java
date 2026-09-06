@@ -1,7 +1,10 @@
 package com.prorenta.financeservice.service.impl;
 
 import com.prorenta.financeservice.exception.CurrencyNotFoundException;
+import com.prorenta.financeservice.exception.LimitExceededException;
 import com.prorenta.financeservice.integration.CbrFeignClient;
+import com.prorenta.financeservice.model.dto.CurrencyRateDto;
+import com.prorenta.financeservice.model.dto.ListCurrencyRatesResponseDto;
 import com.prorenta.financeservice.model.dto.ValCursResponseDto;
 import com.prorenta.financeservice.model.entity.Currency;
 import com.prorenta.financeservice.model.entity.CurrencyRate;
@@ -15,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -25,6 +29,8 @@ public class CurrencyRateServiceImpl implements CurrencyRateService {
     private final CbrFeignClient cbrFeignClient;
     private final CurrencyService currencyService;
     private final CurrencyRateRepository currencyRateRepository;
+
+    private static final int YEARS_LIMIT = 5;
 
     @Override
     @Transactional
@@ -75,5 +81,37 @@ public class CurrencyRateServiceImpl implements CurrencyRateService {
         } catch (Exception e) {
             log.error("Ошибка при получении курсов валют: {}", e.getMessage(), e);
         }
+    }
+
+    @Override
+    public ListCurrencyRatesResponseDto getCurrencyRates(
+            String currencyCode,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        log.debug("Получение списка куросв валюты {} за период c {} по {}",
+                currencyCode, startDate, endDate);
+
+        if (endDate.isBefore(startDate)) {
+            throw new LimitExceededException("Дата окончания не может быть раньше даты начала");
+        }
+
+        if (startDate.plusYears(YEARS_LIMIT).isBefore(endDate)) {
+            throw new LimitExceededException("Запрашиваемый период для графика не может превышать " + YEARS_LIMIT + " лет");
+        }
+
+        Currency currency = currencyService.findByCode(currencyCode);
+
+        log.debug("Валюта найдена: currencyCode={}", currencyCode);
+
+        List<CurrencyRateDto> currencyResponseDtoList = currencyRateRepository.findAllByCurrencyIdAndRateDateBetweenOrderByRateDateAsc(
+                currency.getId(),
+                startDate,
+                endDate
+        );
+        log.debug("Список курсов валют загружен: size={}", currencyResponseDtoList.size());
+        return ListCurrencyRatesResponseDto.builder()
+                .rates(currencyResponseDtoList)
+                .build();
     }
 }
