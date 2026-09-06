@@ -84,6 +84,7 @@ public class CurrencyRateServiceImpl implements CurrencyRateService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ListCurrencyRatesResponseDto getCurrencyRates(
             String currencyCode,
             LocalDate startDate,
