@@ -45,7 +45,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(LimitExceededException.class)
     public ResponseEntity<ErrorDto> handleLimitExceededException(LimitExceededException ex) {
-        log.warn("Лимит исчерпан: {}", ex.getMessage());
+        log.warn("Лимит превышен: {}", ex.getMessage());
         ErrorDto errorDto = ErrorDto.builder()
                 .status(HttpStatus.BAD_REQUEST)
                 .message(ex.getMessage())
