@@ -1,6 +1,7 @@
 package com.prorenta.financeservice.service.impl.unit_tests.TransactionServiceImplUnitTest;
 
-import com.prorenta.financeservice.integration.UserFeignClient;
+import com.prorenta.financeservice.factory.UserInfoDataFactory;
+import com.prorenta.financeservice.security.CurrentUserProvider;
 import com.prorenta.financeservice.mapper.TransactionMapperImpl;
 import com.prorenta.financeservice.model.dto.*;
 import com.prorenta.financeservice.model.entity.Category;
@@ -56,15 +57,18 @@ public class GetTransactionServiceImplUnitTest {
     private TransactionRepository transactionRepository;
 
     @MockitoBean
-    private UserFeignClient userFeignClient;
+    private CurrentUserProvider currentUserProvider;
 
     @Test
     @DisplayName("Получение транзакции: успешно")
     public void getTransactionsSuccessfulTest() {
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
+
         UserInfoDto userInfoDto = createDefaultUserInfoDto();
-        Category category = createDefaultCategory(userInfoDto.id());
+        Category category = createDefaultCategory(userInfoDto.userId());
         Currency currency = createDefaultCurrency();
-        Transaction transaction = createDefaultTransaction(userInfoDto.id(), category, currency);
+        Transaction transaction = createDefaultTransaction(userInfoDto.userId(), category, currency);
 
         FilterTransactionRequestDto filterDto = createFilterTransactionRequestDto(
                 "Электроника",
@@ -92,6 +96,9 @@ public class GetTransactionServiceImplUnitTest {
     @Test
     @DisplayName("Получение транзакций: пустой список")
     public void getTransactionsEmptyListTest() {
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
+
         FilterTransactionRequestDto filterDto = createFilterTransactionRequestDto(
                 "Еда",
                 LocalDate.now().minusDays(1),

@@ -3,6 +3,7 @@ package com.prorenta.financeservice.controller;
 import com.prorenta.financeservice.model.dto.CurrencyResponseDto;
 import com.prorenta.financeservice.model.dto.ErrorDto;
 import com.prorenta.financeservice.model.dto.ListCurrenciesResponseDto;
+import com.prorenta.financeservice.model.dto.ListCurrencyRatesResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -14,7 +15,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Tag(name = "Currencies", description = "Операции с валютами")
@@ -61,5 +64,25 @@ public interface CurrencyController {
     })
     ResponseEntity<CurrencyResponseDto> getCurrency(
             @PathVariable UUID currencyId
+    );
+
+    @GetMapping("/{currencyCode}/rates")
+    @Operation(
+            summary = "Получене списка курсов валюты в период с startDate до endDate"
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Успешное получение списка курсов валют",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ListCurrencyRatesResponseDto.class)
+                    )
+            )
+    })
+    ResponseEntity<ListCurrencyRatesResponseDto> getCurrencyRates(
+            @PathVariable String currencyCode,
+            @RequestParam LocalDate startDate,
+            @RequestParam LocalDate endDate
     );
 }

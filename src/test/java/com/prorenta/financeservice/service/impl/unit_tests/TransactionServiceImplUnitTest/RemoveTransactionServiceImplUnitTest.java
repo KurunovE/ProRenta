@@ -1,6 +1,7 @@
 package com.prorenta.financeservice.service.impl.unit_tests.TransactionServiceImplUnitTest;
 
-import com.prorenta.financeservice.integration.UserFeignClient;
+import com.prorenta.financeservice.factory.UserInfoDataFactory;
+import com.prorenta.financeservice.security.CurrentUserProvider;
 import com.prorenta.financeservice.mapper.TransactionMapperImpl;
 import com.prorenta.financeservice.repository.TransactionRepository;
 import com.prorenta.financeservice.service.CategoryService;
@@ -40,16 +41,20 @@ public class RemoveTransactionServiceImplUnitTest {
     private TransactionRepository transactionRepository;
 
     @MockitoBean
-    private UserFeignClient userFeignClient;
+    private CurrentUserProvider currentUserProvider;
 
     @Test
     @DisplayName("Удаление транзакции: успешно")
     public void softRemoveTransactionSuccessfulTest() {
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
+
         UUID transactionId = UUID.randomUUID();
+        Mockito.when(transactionRepository.softRemoveTransaction(transactionId, currentUserProvider.getCurrentUserId())).thenReturn(1);
 
         transactionService.softRemoveTransaction(transactionId);
 
         Mockito.verify(transactionRepository, Mockito.times(1))
-                .softRemoveTransaction(transactionId);
+                .softRemoveTransaction(transactionId, currentUserProvider.getCurrentUserId());
     }
 }

@@ -1,5 +1,7 @@
 package com.prorenta.financeservice.service.impl.unit_tests.CategoryServiceImplUnitTest;
 
+import com.prorenta.financeservice.factory.UserInfoDataFactory;
+import com.prorenta.financeservice.security.CurrentUserProvider;
 import com.prorenta.financeservice.exception.CategoryNotFoundException;
 import com.prorenta.financeservice.mapper.CategoryMapperImpl;
 import com.prorenta.financeservice.model.entity.Category;
@@ -36,16 +38,21 @@ public class FindCategoryServiceImplUnitTest {
     @MockitoBean
     private CategoryRepository categoryRepository;
 
+    @MockitoBean
+    private CurrentUserProvider currentUserProvider;
+
     @Test
     @DisplayName("Поиск категории по id: успешно")
     public void findCategoryByIdSuccessfulTest() {
-        UUID userId = UUID.randomUUID();
+        UUID userId = UserInfoDataFactory.DEFAULT_USER_ID;
         Category expected = createDefaultCategory(userId);
 
-        Mockito.when(categoryRepository.findById(Mockito.any(UUID.class)))
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
+        Mockito.when(categoryRepository.findByIdAndUserIdAndIsDeletedFalse(Mockito.any(UUID.class), Mockito.eq(UserInfoDataFactory.DEFAULT_USER_ID)))
                 .thenReturn(Optional.ofNullable(expected));
 
-        Category actual = categoryService.findById(DEFAULT_CATEGORY_ID);
+        Category actual = categoryService.findAvailableCategoryById(DEFAULT_CATEGORY_ID);
 
         Assertions.assertNotNull(actual);
         Assertions.assertEquals(DEFAULT_CATEGORY_ID, actual.getId());
@@ -55,16 +62,16 @@ public class FindCategoryServiceImplUnitTest {
     @Test
     @DisplayName("Поиск категории по id: категория не найдена")
     public void findCategoryByIdCategoryNotFoundTest() {
-        String message = "Кактегория с id=" + DEFAULT_CATEGORY_ID + " не найдена";
+        String message = "Категория с id=" + DEFAULT_CATEGORY_ID + " не найдена";
 
-        Mockito.when(categoryRepository.findById(Mockito.any(UUID.class)))
-                .thenThrow(new CategoryNotFoundException(
-                        "Кактегория с id=" + DEFAULT_CATEGORY_ID + " не найдена"
-                ));
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
+        Mockito.when(categoryRepository.findByIdAndUserIdAndIsDeletedFalse(Mockito.any(UUID.class), Mockito.eq(UserInfoDataFactory.DEFAULT_USER_ID)))
+                .thenReturn(Optional.empty());
 
         CategoryNotFoundException thrown = Assertions.assertThrows(
                 CategoryNotFoundException.class,
-                () -> categoryService.findById(DEFAULT_CATEGORY_ID)
+                () -> categoryService.findAvailableCategoryById(DEFAULT_CATEGORY_ID)
         );
 
         Assertions.assertEquals(message, thrown.getMessage());

@@ -1,5 +1,6 @@
 package com.prorenta.financeservice.service.impl.module_tests.TransactionServiceImplModuleTest;
 
+import com.prorenta.financeservice.security.CurrentUserProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.prorenta.financeservice.controller.impl.TransactionControllerImpl;
 import com.prorenta.financeservice.exception.CategoryNotFoundException;
@@ -8,7 +9,6 @@ import com.prorenta.financeservice.factory.CategoryDataFactory;
 import com.prorenta.financeservice.factory.CurrencyDataFactory;
 import com.prorenta.financeservice.factory.TransactionDataFactory;
 import com.prorenta.financeservice.factory.UserInfoDataFactory;
-import com.prorenta.financeservice.integration.UserFeignClient;
 import com.prorenta.financeservice.mapper.TransactionMapperImpl;
 import com.prorenta.financeservice.model.dto.CreateTransactionRequestDto;
 import com.prorenta.financeservice.model.dto.ErrorDto;
@@ -30,7 +30,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -68,23 +67,23 @@ public class CreateTransactionServiceImplModuleTest {
     private CurrencyService currencyService;
 
     @MockitoBean
-    private UserFeignClient userFeignClient;
+    private CurrentUserProvider currentUserProvider;
 
     @Test
     @SneakyThrows
-    @DisplayName("Создание транзакции: успешно (HTTP 201)")
+    @DisplayName("Создание транзакции: успешно")
     public void createTransactionSuccessfully() {
         UserInfoDto userInfoDto = UserInfoDataFactory.createDefaultUserInfoDto();
-        Category category = CategoryDataFactory.createDefaultCategory(userInfoDto.id());
+        Category category = CategoryDataFactory.createDefaultCategory(userInfoDto.userId());
         Currency currency = CurrencyDataFactory.createDefaultCurrency();
 
-        Transaction savedTransaction = TransactionDataFactory.createDefaultTransaction(userInfoDto.id(), category, currency);
-        CreateTransactionRequestDto requestDto = TransactionDataFactory.createRequestDto(userInfoDto.id(), category, currency);
+        Transaction savedTransaction = TransactionDataFactory.createDefaultTransaction(userInfoDto.userId(), category, currency);
+        CreateTransactionRequestDto requestDto = TransactionDataFactory.createRequestDto(category, currency);
         TransactionResponseDto expected = TransactionDataFactory.createResponseDto(savedTransaction, category, currency);
 
-        Mockito.when(userFeignClient.getUserInfo(Mockito.any(UUID.class)))
-                .thenReturn(ResponseEntity.ok(userInfoDto));
-        Mockito.when(categoryService.findById(Mockito.any(UUID.class)))
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
+        Mockito.when(categoryService.findAvailableCategoryById(Mockito.any(UUID.class)))
                 .thenReturn(category);
         Mockito.when(currencyService.findById(Mockito.any(UUID.class)))
                 .thenReturn(currency);
@@ -110,15 +109,17 @@ public class CreateTransactionServiceImplModuleTest {
 
     @Test
     @SneakyThrows
-    @DisplayName("Создание транзакции: ошибка валидации DTO (HTTP 400)")
+    @DisplayName("Создание транзакции: ошибка валидации DTO")
     public void createTransactionWithValidationException() {
         CreateTransactionRequestDto requestDto = CreateTransactionRequestDto.builder()
-                .userId(UUID.randomUUID())
                 .categoryId(UUID.randomUUID())
                 .currencyId(UUID.randomUUID())
                 .amount(java.math.BigDecimal.ZERO)
                 .createdDate(LocalDate.now())
                 .build();
+
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
 
         MvcResult mvcResult = mockMvc.perform(post("/api/v1/transactions")
                         .content(objectMapper.writeValueAsString(requestDto))
@@ -134,13 +135,13 @@ public class CreateTransactionServiceImplModuleTest {
 
     @Test
     @SneakyThrows
-    @DisplayName("Создание транзакции: бизнес-ошибка - Категория не найдена (HTTP 404)")
+    @DisplayName("Создание транзакции: категория не найдена")
     public void createTransactionCategoryNotFound() {
         UserInfoDto userInfoDto = UserInfoDataFactory.createDefaultUserInfoDto();
-        Category category = CategoryDataFactory.createDefaultCategory(userInfoDto.id());
+        Category category = CategoryDataFactory.createDefaultCategory(userInfoDto.userId());
         Currency currency = CurrencyDataFactory.createDefaultCurrency();
 
-        CreateTransactionRequestDto requestDto = TransactionDataFactory.createRequestDto(userInfoDto.id(), category, currency);
+        CreateTransactionRequestDto requestDto = TransactionDataFactory.createRequestDto(category, currency);
         String message = "Категория с id=" + requestDto.categoryId() + " не найдена";
 
         ErrorDto expected = ErrorDto.builder()
@@ -148,9 +149,10 @@ public class CreateTransactionServiceImplModuleTest {
                 .message(message)
                 .build();
 
-        Mockito.when(userFeignClient.getUserInfo(Mockito.any(UUID.class)))
-                .thenReturn(ResponseEntity.ok(userInfoDto));
-        Mockito.when(categoryService.findById(Mockito.any(UUID.class)))
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
+
+        Mockito.when(categoryService.findAvailableCategoryById(Mockito.any(UUID.class)))
                 .thenThrow(new CategoryNotFoundException(message));
 
         MvcResult mvcResult = mockMvc.perform(post("/api/v1/transactions")
@@ -168,5 +170,35 @@ public class CreateTransactionServiceImplModuleTest {
                 .isEqualTo(expected.message());
 
         Mockito.verifyNoInteractions(transactionRepository);
+    }
+
+    @Test
+    @SneakyThrows
+    @DisplayName("Создание транзакции: нечитаемый JSON / несовпадение типов")
+    public void createTransactionWithUnreadableJson() {
+        String invalidJson = """
+                {
+                  "userId": "11111111-1111-1111-1111-111111111111",
+                  "categoryId": "22222222-2222-2222-2222-222222222222",
+                  "currencyId": "33333333-3333-3333-3333-333333333333",
+                  "amount": "сто рублей",
+                  "createdDate": "2026-07-23"
+                }
+                """;
+
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
+
+        MvcResult mvcResult = mockMvc.perform(post("/api/v1/transactions")
+                        .content(invalidJson)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .characterEncoding("UTF-8"))
+                .andReturn();
+
+        Assertions.assertThat(mvcResult.getResponse().getStatus())
+                .isEqualTo(HttpStatus.BAD_REQUEST.value());
+
+        Mockito.verifyNoInteractions(transactionRepository);
+        Mockito.verifyNoInteractions(categoryService);
     }
 }

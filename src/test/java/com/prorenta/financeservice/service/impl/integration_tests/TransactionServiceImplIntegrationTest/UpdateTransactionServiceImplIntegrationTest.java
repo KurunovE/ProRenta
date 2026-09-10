@@ -1,5 +1,9 @@
 package com.prorenta.financeservice.service.impl.integration_tests.TransactionServiceImplIntegrationTest;
 
+import com.prorenta.financeservice.factory.UserInfoDataFactory;
+import org.mockito.Mockito;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import com.prorenta.financeservice.security.CurrentUserProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.prorenta.financeservice.model.dto.TransactionResponseDto;
 import com.prorenta.financeservice.model.dto.UpdateTransactionRequestDto;
@@ -24,6 +28,9 @@ public class UpdateTransactionServiceImplIntegrationTest extends AbstractIntegra
     @Autowired
     private ObjectMapper objectMapper;
 
+    @MockitoBean
+    private CurrentUserProvider currentUserProvider;
+
     @Test
     @Sql(
             scripts = {
@@ -42,6 +49,9 @@ public class UpdateTransactionServiceImplIntegrationTest extends AbstractIntegra
                 .description("Повышенная зарплата")
                 .bank("Alfa-Bank")
                 .build();
+
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
 
         MvcResult mvcResult = mockMvc.perform(patch("/api/v1/transactions/{id}", transactionId)
                         .content(objectMapper.writeValueAsString(requestDto))
@@ -82,6 +92,9 @@ public class UpdateTransactionServiceImplIntegrationTest extends AbstractIntegra
                 .categoryId(newCategoryId)
                 .build();
 
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
+
         MvcResult mvcResult = mockMvc.perform(patch("/api/v1/transactions/{id}", transactionId)
                         .content(objectMapper.writeValueAsString(requestDto))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -116,6 +129,9 @@ public class UpdateTransactionServiceImplIntegrationTest extends AbstractIntegra
         UpdateTransactionRequestDto requestDto = UpdateTransactionRequestDto.builder()
                 .amount(BigDecimal.valueOf(999.00))
                 .build();
+
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
 
         MvcResult mvcResult = mockMvc.perform(patch("/api/v1/transactions/{id}", deletedTransactionId)
                         .content(objectMapper.writeValueAsString(requestDto))

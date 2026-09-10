@@ -5,6 +5,16 @@ user:
   service:
     url: http://localhost:9090
 
+cbr:
+  exchange-rates:
+    url: https://www.cbr.ru/scripts
+    value: /XML_daily.asp
+
+scheduler:
+  cdr-scheduler:
+    cron: 0 0 15 * * MON-FRI
+    zone: Europe/Moscow
+
 spring:
   datasource:
     url: jdbc:h2:mem:finance_db
@@ -24,6 +34,10 @@ spring:
   liquibase:
     change-log: classpath:/db/changelog/changelog.yaml
     enabled: true
+
+  cache:
+    type: simple
+    cache-names: currencies_by_code, all_currencies, currency_dto_by_id, currency_entity_by_id
 
 logging:
   level:

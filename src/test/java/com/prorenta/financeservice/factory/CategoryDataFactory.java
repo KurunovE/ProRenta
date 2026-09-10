@@ -23,21 +23,15 @@ public class CategoryDataFactory {
                 .build();
     }
 
-    public static CreateCategoryRequestDto createDefaultCategoryRequestDto(
-            UUID userId
-    ) {
+    public static CreateCategoryRequestDto createDefaultCategoryRequestDto() {
         return CreateCategoryRequestDto.builder()
-                .userId(userId)
                 .name(DEFAULT_CATEGORY_NAME)
                 .type(CategoryType.EXPENSE)
                 .build();
     }
 
-    public static CreateCategoryRequestDto createIncorrectCategoryRequestDto(
-            UUID userId
-    ) {
+    public static CreateCategoryRequestDto createIncorrectCategoryRequestDto() {
         return CreateCategoryRequestDto.builder()
-                .userId(userId)
                 .name("")
                 .type(null)
                 .build();

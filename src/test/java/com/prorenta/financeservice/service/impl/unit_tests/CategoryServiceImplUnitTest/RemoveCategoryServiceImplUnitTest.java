@@ -1,5 +1,7 @@
 package com.prorenta.financeservice.service.impl.unit_tests.CategoryServiceImplUnitTest;
 
+import com.prorenta.financeservice.factory.UserInfoDataFactory;
+import com.prorenta.financeservice.security.CurrentUserProvider;
 import com.prorenta.financeservice.mapper.CategoryMapperImpl;
 import com.prorenta.financeservice.repository.CategoryRepository;
 import com.prorenta.financeservice.service.CategoryService;
@@ -32,14 +34,22 @@ public class RemoveCategoryServiceImplUnitTest {
     @MockitoBean
     private CategoryRepository categoryRepository;
 
+    @MockitoBean
+    private CurrentUserProvider currentUserProvider;
+
     @Test
     @DisplayName("Мягкое удаление категории: успешно")
     public void softRemoveCategorySuccessfulTest() {
         UUID categoryId = DEFAULT_CATEGORY_ID;
 
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
+        Mockito.when(categoryRepository.softRemoveCategoryById(categoryId, currentUserProvider.getCurrentUserId()))
+                .thenReturn(1);
+
         categoryService.softRemoveCategory(categoryId);
 
         Mockito.verify(categoryRepository, Mockito.times(1))
-                .softRemoveCategoryById(categoryId);
+                .softRemoveCategoryById(categoryId, currentUserProvider.getCurrentUserId());
     }
 }

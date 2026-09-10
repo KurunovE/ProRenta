@@ -1,5 +1,9 @@
 package com.prorenta.financeservice.service.impl.integration_tests.TransactionServiceImplIntegrationTest;
 
+import com.prorenta.financeservice.factory.UserInfoDataFactory;
+import org.mockito.Mockito;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import com.prorenta.financeservice.security.CurrentUserProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.prorenta.financeservice.model.dto.UpdateTransactionRequestDto;
 import com.prorenta.financeservice.service.impl.integration_tests.AbstractIntegrationTest;
@@ -23,6 +27,9 @@ public class RemoveTransactionServiceImplIntegrationTest extends AbstractIntegra
     @Autowired
     private ObjectMapper objectMapper;
 
+    @MockitoBean
+    private CurrentUserProvider currentUserProvider;
+
     @Test
     @Sql(
             scripts = {
@@ -35,6 +42,9 @@ public class RemoveTransactionServiceImplIntegrationTest extends AbstractIntegra
     @DisplayName("Удаление транзакции: мягкое удаление транзакции и проверка её скрытия из БД")
     public void softDeleteTransactionIntegrationTest() {
         UUID transactionId = UUID.fromString("44444444-4444-4444-4444-444444444441");
+
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
 
         MvcResult deleteResult = mockMvc.perform(delete("/api/v1/transactions/{id}", transactionId))
                 .andReturn();

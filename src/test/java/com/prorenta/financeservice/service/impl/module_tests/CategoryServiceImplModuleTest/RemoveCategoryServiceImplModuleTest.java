@@ -1,9 +1,10 @@
 package com.prorenta.financeservice.service.impl.module_tests.CategoryServiceImplModuleTest;
 
+import com.prorenta.financeservice.factory.UserInfoDataFactory;
+import com.prorenta.financeservice.security.CurrentUserProvider;
 import com.prorenta.financeservice.controller.impl.CategoryControllerImpl;
 import com.prorenta.financeservice.exception.GlobalExceptionHandler;
 import com.prorenta.financeservice.factory.CategoryDataFactory;
-import com.prorenta.financeservice.integration.UserFeignClient;
 import com.prorenta.financeservice.mapper.CategoryMapperImpl;
 import com.prorenta.financeservice.repository.CategoryRepository;
 import com.prorenta.financeservice.service.impl.CategoryServiceImpl;
@@ -43,13 +44,19 @@ public class RemoveCategoryServiceImplModuleTest {
     private CategoryRepository categoryRepository;
 
     @MockitoBean
-    private UserFeignClient userFeignClient;
+    private CurrentUserProvider currentUserProvider;
 
     @Test
     @SneakyThrows
     @DisplayName("Мягкое удаление категории: успешно")
     public void softRemoveCategorySuccessfully() {
         UUID categoryId = CategoryDataFactory.DEFAULT_CATEGORY_ID;
+
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
+
+        Mockito.when(categoryRepository.softRemoveCategoryById(categoryId, currentUserProvider.getCurrentUserId()))
+                .thenReturn(1);
 
         MvcResult mvcResult = mockMvc.perform(delete("/api/v1/categories/{id}", categoryId)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -59,14 +66,17 @@ public class RemoveCategoryServiceImplModuleTest {
         Assertions.assertThat(mvcResult.getResponse().getStatus())
                 .isEqualTo(HttpStatus.NO_CONTENT.value());
 
-        Mockito.verify(categoryRepository, Mockito.times(1)).softRemoveCategoryById(categoryId);
+        Mockito.verify(categoryRepository, Mockito.times(1)).softRemoveCategoryById(categoryId, currentUserProvider.getCurrentUserId());
     }
 
     @Test
     @SneakyThrows
-    @DisplayName("Мягкое удаление категории: ошибка 400 (Невалидный формат UUID)")
+    @DisplayName("Мягкое удаление категории: ошибка 400")
     public void softRemoveCategoryInvalidUuidFormat() {
         String invalidCategoryId = "invalid-uuid-string";
+
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
 
         MvcResult mvcResult = mockMvc.perform(delete("/api/v1/categories/{id}", invalidCategoryId)
                         .contentType(MediaType.APPLICATION_JSON)

@@ -34,7 +34,6 @@ public interface CategoryController {
                             examples = @ExampleObject(
                                     name = "Пример JSON для запроса",
                                     value = """
-                                            "userId" : "11111111-1111-1111-1111-111111111111",
                                             "name" : "Еда",
                                             "type" : "EXPENSE"
                                             """
@@ -64,13 +63,13 @@ public interface CategoryController {
             @Valid @RequestBody CreateCategoryRequestDto request
     );
 
-    @GetMapping("/{userId}")
+    @GetMapping
     @Operation(
             summary = "Получение всех категорий пользователя"
     )
     @ApiResponses({
             @ApiResponse(
-                    responseCode = "201",
+                    responseCode = "200",
                     description = "Успешное получение категорий",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
@@ -86,9 +85,7 @@ public interface CategoryController {
                     )
             )
     })
-    ResponseEntity<GetAllCategoriesResponseDto> getCategories(
-            @PathVariable UUID userId
-    );
+    ResponseEntity<GetAllCategoriesResponseDto> getCategories();
 
     @DeleteMapping("/{categoryId}")
     @Operation(summary = "Удаление категории")

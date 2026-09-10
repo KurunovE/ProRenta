@@ -1,8 +1,6 @@
 package com.prorenta.financeservice.service.impl.integration_tests;
 
-import com.github.tomakehurst.wiremock.client.WireMock;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -29,8 +27,4 @@ public abstract class AbstractIntegrationTest {
     @Autowired
     protected MockMvc mockMvc;
 
-    @BeforeEach
-    public void setup() {
-        WireMock.resetAllRequests();
-    }
 }

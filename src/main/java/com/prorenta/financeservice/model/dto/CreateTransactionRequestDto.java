@@ -10,9 +10,6 @@ import java.util.UUID;
 @Builder
 public record CreateTransactionRequestDto(
 
-        @NotNull(message = "userId обязателен")
-        UUID userId,
-
         @NotNull(message = "categoryId обязателен")
         UUID categoryId,
 

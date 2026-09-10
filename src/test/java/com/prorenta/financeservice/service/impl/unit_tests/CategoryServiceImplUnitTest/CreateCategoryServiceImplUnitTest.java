@@ -1,5 +1,7 @@
 package com.prorenta.financeservice.service.impl.unit_tests.CategoryServiceImplUnitTest;
 
+import com.prorenta.financeservice.factory.UserInfoDataFactory;
+import com.prorenta.financeservice.security.CurrentUserProvider;
 import com.prorenta.financeservice.exception.LimitExceededException;
 import com.prorenta.financeservice.mapper.CategoryMapperImpl;
 import com.prorenta.financeservice.model.dto.CategoryResponseDto;
@@ -31,19 +33,25 @@ import java.util.UUID;
 )
 public class CreateCategoryServiceImplUnitTest {
 
+
     @Autowired
     private CategoryService categoryService;
 
     @MockitoBean
     private CategoryRepository categoryRepository;
 
+    @MockitoBean
+    private CurrentUserProvider currentUserProvider;
+
     @Test
     @DisplayName("Создание категории: успешно")
     public void createCategorySuccessfulTest() {
-        UUID userId = UUID.randomUUID();
-        CreateCategoryRequestDto requestDto = createDefaultCategoryRequestDto(userId);
+        UUID userId = UserInfoDataFactory.DEFAULT_USER_ID;
+        CreateCategoryRequestDto requestDto = createDefaultCategoryRequestDto();
         Category expectedCategory = createDefaultCategory(userId);
 
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
         Mockito.when(categoryRepository.countLimitByUserId(userId))
                 .thenReturn(5);
         Mockito.when(categoryRepository.save(Mockito.any(Category.class)))
@@ -60,10 +68,13 @@ public class CreateCategoryServiceImplUnitTest {
     @Test
     @DisplayName("Создание категории: ошибка превышения лимита")
     public void createCategoryLimitExceededTest() {
-        UUID userId = UUID.randomUUID();
-        CreateCategoryRequestDto requestDto = createDefaultCategoryRequestDto(userId);
+        UUID userId = UserInfoDataFactory.DEFAULT_USER_ID;
+        CreateCategoryRequestDto requestDto = createDefaultCategoryRequestDto();
 
-        Mockito.when(categoryRepository.countLimitByUserId(userId)).thenReturn(31);
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
+        Mockito.when(categoryRepository.countLimitByUserId(userId))
+                .thenReturn(31);
 
         LimitExceededException thrown = Assertions.assertThrows(
                 LimitExceededException.class,

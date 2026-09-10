@@ -1,5 +1,9 @@
 package com.prorenta.financeservice.service.impl.integration_tests.CategoryServiceImplIntegrationTest;
 
+import com.prorenta.financeservice.factory.UserInfoDataFactory;
+import org.mockito.Mockito;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import com.prorenta.financeservice.security.CurrentUserProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.prorenta.financeservice.model.dto.GetAllCategoriesResponseDto;
 import com.prorenta.financeservice.service.impl.integration_tests.AbstractIntegrationTest;
@@ -23,6 +27,9 @@ public class RemoveCategoryServiceImplIntegrationTest extends AbstractIntegratio
     @Autowired
     private ObjectMapper objectMapper;
 
+    @MockitoBean
+    private CurrentUserProvider currentUserProvider;
+
     @Test
     @Sql(
             scripts = {
@@ -34,8 +41,10 @@ public class RemoveCategoryServiceImplIntegrationTest extends AbstractIntegratio
     @SneakyThrows
     @DisplayName("Удаление категории: мягкое удаление и проверка скрытия из БД")
     public void softDeleteCategoryIntegrationTest() {
-        UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
         UUID categoryId = UUID.fromString("22222222-2222-2222-2222-222222222222");
+
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
 
         MvcResult deleteResult = mockMvc.perform(delete("/api/v1/categories/{categoryId}", categoryId))
                 .andReturn();
@@ -43,7 +52,7 @@ public class RemoveCategoryServiceImplIntegrationTest extends AbstractIntegratio
         Assertions.assertThat(deleteResult.getResponse().getStatus())
                 .isEqualTo(HttpStatus.NO_CONTENT.value());
 
-        MvcResult getResult = mockMvc.perform(get("/api/v1/categories/{userId}", userId)
+        MvcResult getResult = mockMvc.perform(get("/api/v1/categories")
                         .contentType(MediaType.APPLICATION_JSON)
                         .characterEncoding("UTF-8"))
                 .andReturn();

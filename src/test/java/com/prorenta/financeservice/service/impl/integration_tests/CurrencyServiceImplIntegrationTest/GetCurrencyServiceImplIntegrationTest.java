@@ -1,5 +1,7 @@
 package com.prorenta.financeservice.service.impl.integration_tests.CurrencyServiceImplIntegrationTest;
 
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import com.prorenta.financeservice.security.CurrentUserProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.prorenta.financeservice.model.dto.CurrencyResponseDto;
 import com.prorenta.financeservice.model.dto.ErrorDto;
@@ -23,6 +25,9 @@ public class GetCurrencyServiceImplIntegrationTest extends AbstractIntegrationTe
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @MockitoBean
+    private CurrentUserProvider currentUserProvider;
 
     @Test
     @Sql(

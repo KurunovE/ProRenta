@@ -33,7 +33,6 @@ public interface TransactionController {
                                     name = "Пример JSON для запроса",
                                     value = """
                                             {
-                                                "userId": "123e4567-e89b-12d3-a456-426614174000",
                                                 "categoryId": "987e6543-e21b-12d3-a456-426614174000",
                                                 "currencyId": "550e8400-e29b-41d4-a716-446655440000",
                                                 "amount": 350.50,

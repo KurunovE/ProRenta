@@ -9,6 +9,7 @@ import com.prorenta.financeservice.model.dto.GetAllCategoriesResponseDto;
 import com.prorenta.financeservice.model.entity.Category;
 import com.prorenta.financeservice.repository.CategoryRepository;
 import com.prorenta.financeservice.service.CategoryService;
+import com.prorenta.financeservice.security.CurrentUserProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,41 +27,46 @@ public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final CategoryMapper categoryMapper;
+    private final CurrentUserProvider currentUserProvider;
 
     @Override
     @Transactional(readOnly = true)
-    public Category findById(UUID id) {
-        return categoryRepository.findById(id).orElseThrow(
-                () -> new CategoryNotFoundException("Кактегория с id=" + id + " не найдена")
+    public Category findAvailableCategoryById(UUID id) {
+        UUID userId = currentUserProvider.getCurrentUserId();
+        log.debug("Получение категории: categoryId={}, userId={}", id, userId);
+        return categoryRepository.findByIdAndUserIdAndIsDeletedFalse(id, userId).orElseThrow(
+                () -> new CategoryNotFoundException("Категория с id=" + id + " не найдена")
         );
     }
 
     @Override
     @Transactional
     public CategoryResponseDto createCategory(CreateCategoryRequestDto dto) {
-        log.info("Создание категории: userId={}", dto.userId());
+        UUID userId = currentUserProvider.getCurrentUserId();
+        log.debug("Создание категории: userId={}", userId);
 
-        if (categoryRepository.countLimitByUserId(dto.userId()) > CATEGORY_LIMIT) {
+        if (categoryRepository.countLimitByUserId(userId) >= CATEGORY_LIMIT) {
             throw new LimitExceededException("Превышен лимит активных категорий");
         }
 
         Category category = Category.builder()
-                .userId(dto.userId())
+                .userId(userId)
                 .name(dto.name())
                 .type(dto.type())
                 .build();
 
         Category savedCategory = categoryRepository.save(category);
-        log.info("Категория успешно сохранена: categoryId={}", savedCategory.getId());
+        log.info("Категория успешно сохранена: categoryId={}, userId={}", savedCategory.getId(), userId);
         return categoryMapper.mapCategoryToCategoryResponseDto(savedCategory);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public GetAllCategoriesResponseDto getAllCategoriesByUserId(UUID userId) {
-        log.info("Получение списка категорий: userId={}", userId);
+    public GetAllCategoriesResponseDto getCurrentUserCategories() {
+        UUID userId = currentUserProvider.getCurrentUserId();
+        log.debug("Получение списка категорий: userId={}", userId);
         List<Category> categories = categoryRepository.findAllByUserId(userId);
-        log.info("Категории успешно найдены: count={}, userId={}", categories.size(), userId);
+        log.debug("Категории успешно найдены: count={}, userId={}", categories.size(), userId);
         return GetAllCategoriesResponseDto.builder()
                 .categories(categories.stream()
                         .map(categoryMapper::mapCategoryToCategoryResponseDto)
@@ -71,8 +77,11 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional
     public void softRemoveCategory(UUID categoryId) {
-        log.info("Удаление категории: categoryId={}", categoryId);
-        categoryRepository.softRemoveCategoryById(categoryId);
-        log.info("Успешное удаление категории: categoryId={}", categoryId);
+        UUID userId = currentUserProvider.getCurrentUserId();
+        log.debug("Удаление категории: categoryId={}, userId={}", categoryId, userId);
+        if (categoryRepository.softRemoveCategoryById(categoryId, userId) == 0) {
+            throw new CategoryNotFoundException("Категория с id=" + categoryId + " не найдена");
+        }
+        log.info("Успешное удаление категории: categoryId={}, userId={}", categoryId, userId);
     }
 }

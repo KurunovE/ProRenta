@@ -31,12 +31,10 @@ public class TransactionDataFactory {
     }
 
     public static CreateTransactionRequestDto createRequestDto(
-            UUID userId,
             Category category,
             Currency currency
     ) {
         return CreateTransactionRequestDto.builder()
-                .userId(userId)
                 .categoryId(category.getId())
                 .currencyId(currency.getId())
                 .amount(BigDecimal.TEN)

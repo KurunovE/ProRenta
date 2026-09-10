@@ -1,9 +1,10 @@
 package com.prorenta.financeservice.service.impl.unit_tests.TransactionServiceImplUnitTest;
 
+import com.prorenta.financeservice.factory.UserInfoDataFactory;
+import com.prorenta.financeservice.security.CurrentUserProvider;
 import com.prorenta.financeservice.exception.CategoryNotFoundException;
 import com.prorenta.financeservice.exception.CurrencyNotFoundException;
 import com.prorenta.financeservice.exception.UserNotFoundException;
-import com.prorenta.financeservice.integration.UserFeignClient;
 import com.prorenta.financeservice.mapper.TransactionMapperImpl;
 import com.prorenta.financeservice.model.dto.*;
 import com.prorenta.financeservice.model.entity.Category;
@@ -20,7 +21,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -54,21 +54,22 @@ public class CreateTransactionServiceImplUnitTest {
     private TransactionRepository transactionRepository;
 
     @MockitoBean
-    private UserFeignClient userFeignClient;
+    private CurrentUserProvider currentUserProvider;
 
     @Test
     @DisplayName("Создание транзакции: успешно")
     public void createTransactionSuccessfulTest() {
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
+
         UserInfoDto userInfoDto = createDefaultUserInfoDto();
-        Category category = createDefaultCategory(userInfoDto.id());
+        Category category = createDefaultCategory(userInfoDto.userId());
         Currency currency = createDefaultCurrency();
-        Transaction transaction = createDefaultTransaction(userInfoDto.id(), category, currency);
-        CreateTransactionRequestDto requestDto = createRequestDto(userInfoDto.id(), category, currency);
+        Transaction transaction = createDefaultTransaction(userInfoDto.userId(), category, currency);
+        CreateTransactionRequestDto requestDto = createRequestDto(category, currency);
         TransactionResponseDto expected = createResponseDto(transaction, category, currency);
 
-        Mockito.when(userFeignClient.getUserInfo(Mockito.any(UUID.class)))
-                .thenReturn(ResponseEntity.ok(userInfoDto));
-        Mockito.when(categoryService.findById(Mockito.any(UUID.class)))
+        Mockito.when(categoryService.findAvailableCategoryById(Mockito.any(UUID.class)))
                 .thenReturn(category);
         Mockito.when(currencyService.findById(Mockito.any(UUID.class)))
                 .thenReturn(currency);
@@ -84,15 +85,16 @@ public class CreateTransactionServiceImplUnitTest {
     @Test
     @DisplayName("Создание транзакции: категория не найдена")
     public void createTransactionCategoryNotFoundTest() {
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
+
         UserInfoDto userInfoDto = createDefaultUserInfoDto();
         CreateTransactionRequestDto requestDto = createRequestDto(
-                userInfoDto.id(), createDefaultCategory(userInfoDto.id()), createDefaultCurrency()
+                createDefaultCategory(userInfoDto.userId()), createDefaultCurrency()
         );
-        String message = "Кактегория с id=" + requestDto.categoryId() + " не найдена";
+        String message = "Категория с id=" + requestDto.categoryId() + " не найдена";
 
-        Mockito.when(userFeignClient.getUserInfo(Mockito.any(UUID.class)))
-                .thenReturn(ResponseEntity.ok(userInfoDto));
-        Mockito.when(categoryService.findById(Mockito.any(UUID.class)))
+        Mockito.when(categoryService.findAvailableCategoryById(Mockito.any(UUID.class)))
                 .thenThrow(new CategoryNotFoundException(message));
 
         CategoryNotFoundException thrown = Assertions.assertThrows(
@@ -106,16 +108,17 @@ public class CreateTransactionServiceImplUnitTest {
     @Test
     @DisplayName("Создание транзакции: валюта не найдена")
     public void createTransactionCurrencyNotFoundTest() {
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
+
         UserInfoDto userInfoDto = createDefaultUserInfoDto();
-        Category category = createDefaultCategory(userInfoDto.id());
+        Category category = createDefaultCategory(userInfoDto.userId());
         CreateTransactionRequestDto requestDto = createRequestDto(
-                userInfoDto.id(), category, createDefaultCurrency()
+                category, createDefaultCurrency()
         );
         String message = "Валюта с id=" + requestDto.currencyId() + " не найдена";
 
-        Mockito.when(userFeignClient.getUserInfo(Mockito.any(UUID.class)))
-                .thenReturn(ResponseEntity.ok(userInfoDto));
-        Mockito.when(categoryService.findById(Mockito.any(UUID.class)))
+        Mockito.when(categoryService.findAvailableCategoryById(Mockito.any(UUID.class)))
                 .thenReturn(category);
         Mockito.when(currencyService.findById(Mockito.any(UUID.class)))
                 .thenThrow(new CurrencyNotFoundException(message));
@@ -131,14 +134,14 @@ public class CreateTransactionServiceImplUnitTest {
     @Test
     @DisplayName("Создание транзакции: данные пользователя не найдены")
     public void createTransactionUserNotFoundTest() {
-        UUID userId = UUID.randomUUID();
+        UUID userId = UserInfoDataFactory.DEFAULT_USER_ID;
         CreateTransactionRequestDto requestDto = createRequestDto(
-                userId, createDefaultCategory(userId), createDefaultCurrency()
+                createDefaultCategory(userId), createDefaultCurrency()
         );
         String message = "Данные пользователь с id=" + userId + " не найдены";
 
-        Mockito.when(userFeignClient.getUserInfo(userId))
-                .thenReturn(ResponseEntity.ok().body(null));
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenThrow(new UserNotFoundException(message));
 
         UserNotFoundException thrown = Assertions.assertThrows(
                 UserNotFoundException.class,

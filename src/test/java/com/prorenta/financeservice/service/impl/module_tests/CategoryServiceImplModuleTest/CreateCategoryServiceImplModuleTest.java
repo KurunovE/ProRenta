@@ -1,11 +1,11 @@
 package com.prorenta.financeservice.service.impl.module_tests.CategoryServiceImplModuleTest;
 
+import com.prorenta.financeservice.security.CurrentUserProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.prorenta.financeservice.controller.impl.CategoryControllerImpl;
 import com.prorenta.financeservice.exception.GlobalExceptionHandler;
 import com.prorenta.financeservice.factory.CategoryDataFactory;
 import com.prorenta.financeservice.factory.UserInfoDataFactory;
-import com.prorenta.financeservice.integration.UserFeignClient;
 import com.prorenta.financeservice.mapper.CategoryMapperImpl;
 import com.prorenta.financeservice.model.dto.CategoryResponseDto;
 import com.prorenta.financeservice.model.dto.CreateCategoryRequestDto;
@@ -23,7 +23,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -53,22 +52,22 @@ public class CreateCategoryServiceImplModuleTest {
     private ObjectMapper objectMapper;
 
     @MockitoBean
-    private CategoryRepository categoryRepository;
+    private CurrentUserProvider currentUserProvider;
 
     @MockitoBean
-    private UserFeignClient userFeignClient;
+    private CategoryRepository categoryRepository;
 
     @Test
     @SneakyThrows
     @DisplayName("Создание категории: успешно")
     public void createCategorySuccessfully() {
         UserInfoDto userInfoDto = UserInfoDataFactory.createDefaultUserInfoDto();
-        Category savedCategory = CategoryDataFactory.createDefaultCategory(userInfoDto.id());
-        CreateCategoryRequestDto requestDto = CategoryDataFactory.createDefaultCategoryRequestDto(userInfoDto.id());
+        Category savedCategory = CategoryDataFactory.createDefaultCategory(userInfoDto.userId());
+        CreateCategoryRequestDto requestDto = CategoryDataFactory.createDefaultCategoryRequestDto();
         CategoryResponseDto expected = CategoryDataFactory.createDefaultCategoryResponseDto(savedCategory.getId());
 
-        Mockito.when(userFeignClient.getUserInfo(Mockito.any(UUID.class)))
-                .thenReturn(ResponseEntity.ok(userInfoDto));
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
         Mockito.when(categoryRepository.countLimitByUserId(Mockito.any(UUID.class)))
                 .thenReturn(5);
         Mockito.when(categoryRepository.save(Mockito.any(Category.class)))
@@ -99,8 +98,10 @@ public class CreateCategoryServiceImplModuleTest {
     @SneakyThrows
     @DisplayName("Создание категории: ошибка валидации DTO")
     public void createCategoryWithValidationException() {
-        UUID userId = UUID.randomUUID();
-        CreateCategoryRequestDto requestDto = CategoryDataFactory.createIncorrectCategoryRequestDto(userId);
+        CreateCategoryRequestDto requestDto = CategoryDataFactory.createIncorrectCategoryRequestDto();
+
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
 
         MvcResult mvcResult = mockMvc.perform(post("/api/v1/categories")
                         .content(objectMapper.writeValueAsString(requestDto))
@@ -118,20 +119,17 @@ public class CreateCategoryServiceImplModuleTest {
     @SneakyThrows
     @DisplayName("Создание категории: ошибка превышения лимита")
     public void createCategoryWithLimitExceededException() {
-        UUID userId = UUID.randomUUID();
         String message = "Превышен лимит активных категорий";
 
-        CreateCategoryRequestDto requestDto = CategoryDataFactory.createDefaultCategoryRequestDto(userId);
+        CreateCategoryRequestDto requestDto = CategoryDataFactory.createDefaultCategoryRequestDto();
 
         ErrorDto expected = ErrorDto.builder()
                 .status(HttpStatus.BAD_REQUEST)
                 .message(message)
                 .build();
 
-        UserInfoDto userInfo = UserInfoDataFactory.createDefaultUserInfoDto();
-
-        Mockito.when(userFeignClient.getUserInfo(Mockito.any(UUID.class)))
-                .thenReturn(ResponseEntity.ok(userInfo));
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
         Mockito.when(categoryRepository.countLimitByUserId(Mockito.any(UUID.class)))
                 .thenReturn(31);
 
@@ -156,8 +154,11 @@ public class CreateCategoryServiceImplModuleTest {
 
     @Test
     @SneakyThrows
-    @DisplayName("Создание категории: ошибка 400 (Отсутствует тело запроса)")
+    @DisplayName("Создание категории: отсутствует тело запроса")
     public void createCategoryMissingBody() {
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
+
         MvcResult mvcResult = mockMvc.perform(post("/api/v1/categories")
                         .contentType(MediaType.APPLICATION_JSON)
                         .characterEncoding("UTF-8"))
@@ -171,14 +172,15 @@ public class CreateCategoryServiceImplModuleTest {
 
     @Test
     @SneakyThrows
-    @DisplayName("Создание категории: ошибка 400 (Пустое имя категории)")
+    @DisplayName("Создание категории: пустое имя категории")
     public void createCategoryBlankName() {
-        UUID userId = UUID.randomUUID();
         CreateCategoryRequestDto requestDto = CreateCategoryRequestDto.builder()
-                .userId(userId)
                 .name("   ")
                 .type(CategoryType.EXPENSE)
                 .build();
+
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
 
         MvcResult mvcResult = mockMvc.perform(post("/api/v1/categories")
                         .content(objectMapper.writeValueAsString(requestDto))
@@ -194,7 +196,7 @@ public class CreateCategoryServiceImplModuleTest {
 
     @Test
     @SneakyThrows
-    @DisplayName("Создание категории: ошибка 400 (Невалидное значение Enum)")
+    @DisplayName("Создание категории: невалидное значение Enum")
     public void createCategoryInvalidEnum() {
         String invalidJson = """
                 {
@@ -204,8 +206,37 @@ public class CreateCategoryServiceImplModuleTest {
                 }
                 """;
 
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
+
         MvcResult mvcResult = mockMvc.perform(post("/api/v1/categories")
                         .content(invalidJson)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .characterEncoding("UTF-8"))
+                .andReturn();
+
+        Assertions.assertThat(mvcResult.getResponse().getStatus())
+                .isEqualTo(HttpStatus.BAD_REQUEST.value());
+
+        Mockito.verifyNoInteractions(categoryRepository);
+    }
+
+    @Test
+    @SneakyThrows
+    @DisplayName("Создание категории: превышение максимальной длины имени")
+    public void createCategoryNameTooLong() {
+        String tooLongName = "A".repeat(31);
+
+        CreateCategoryRequestDto requestDto = CreateCategoryRequestDto.builder()
+                .name(tooLongName)
+                .type(CategoryType.EXPENSE)
+                .build();
+
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
+
+        MvcResult mvcResult = mockMvc.perform(post("/api/v1/categories")
+                        .content(objectMapper.writeValueAsString(requestDto))
                         .contentType(MediaType.APPLICATION_JSON)
                         .characterEncoding("UTF-8"))
                 .andReturn();

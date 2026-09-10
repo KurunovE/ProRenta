@@ -2,8 +2,7 @@ package com.prorenta.financeservice.service.impl;
 
 import com.prorenta.financeservice.exception.CategoryNotFoundException;
 import com.prorenta.financeservice.exception.TransactionNotFoundException;
-import com.prorenta.financeservice.exception.UserNotFoundException;
-import com.prorenta.financeservice.integration.UserFeignClient;
+import com.prorenta.financeservice.security.CurrentUserProvider;
 import com.prorenta.financeservice.mapper.TransactionMapper;
 import com.prorenta.financeservice.model.dto.*;
 import com.prorenta.financeservice.model.entity.Category;
@@ -21,7 +20,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,28 +34,21 @@ public class TransactionServiceImpl implements TransactionService {
     private final CurrencyService currencyService;
     private final TransactionRepository transactionRepository;
     private final TransactionMapper transactionMapper;
-    private final UserFeignClient userFeignClient;
+    private final CurrentUserProvider currentUserProvider;
 
     @Override
     @Transactional
     public TransactionResponseDto createTransaction(CreateTransactionRequestDto dto) {
-        log.info("Создание транзакции: userId={}", dto.userId());
+        UUID userId = currentUserProvider.getCurrentUserId();
+        log.debug("Создание транзакции: userId={}", userId);
 
-        ResponseEntity<UserInfoDto> userInfo = userFeignClient.getUserInfo(dto.userId());
-        UserInfoDto user = userInfo.getBody();
-
-        if (user == null || user.id() == null || user.name() == null) {
-            log.error("Пользователь с id={} не найден или тело ответа пустое", dto.userId());
-            throw new UserNotFoundException("Данные пользователь с id=" + dto.userId() + " не найдены");
-        }
-
-        Category category = categoryService.findById(dto.categoryId());
+        Category category = categoryService.findAvailableCategoryById(dto.categoryId());
         Currency currency = currencyService.findById(dto.currencyId());
 
-        log.debug("Связанные сущности загружены: categoryId={}, currencyId={}", category.getId(), currency.getId());
+        log.debug("Связанные сущности загружены: categoryId={}, currencyId={}, userId={}", category.getId(), currency.getId(), userId);
 
         Transaction transaction = Transaction.builder()
-                .userId(user.id())
+                .userId(userId)
                 .category(category)
                 .currency(currency)
                 .amount(dto.amount())
@@ -67,7 +58,7 @@ public class TransactionServiceImpl implements TransactionService {
                 .build();
 
         Transaction savedTransaction = transactionRepository.save(transaction);
-        log.info("Транзакция успешно сохранена: transactionId={}", savedTransaction.getId());
+        log.info("Транзакция успешно сохранена: transactionId={}, userId={}", savedTransaction.getId(), userId);
 
         return transactionMapper.mapTransactionToTransactionResponseDto(savedTransaction);
     }
@@ -75,7 +66,8 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional(readOnly = true)
     public FilterTransactionsResponseDto getTransactions(FilterTransactionRequestDto dto) {
-        log.debug("Получение списка транзакций: filters={}", dto);
+        UUID userId = currentUserProvider.getCurrentUserId();
+        log.debug("Получение списка транзакций: userId={}, filters={}", userId, dto);
 
         Pageable pageable = PageRequest.of(
                 dto.page(),
@@ -84,14 +76,15 @@ public class TransactionServiceImpl implements TransactionService {
         );
 
         Specification<Transaction> specification = TransactionFilterSpecification.buildFilter(
+                userId,
                 dto.categoryName(),
                 dto.startCreatedDate(),
                 dto.endCreatedDate()
         );
 
         Page<Transaction> response = transactionRepository.findAll(specification, pageable);
-        log.debug("Найдено {} транзакций. {} страница из {}",
-                response.getTotalElements(), response.getNumber(), response.getTotalPages());
+        log.debug("Найдено {} транзакций. {} страница из {}, userId={}",
+                response.getTotalElements(), response.getNumber(), response.getTotalPages(), userId);
 
         return FilterTransactionsResponseDto.builder()
                 .transactions(
@@ -109,22 +102,23 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional
     public TransactionResponseDto updateTransaction(UUID transactionId, UpdateTransactionRequestDto dto) {
-        log.info("Обновление транзакции: transactionId={}", transactionId);
-        Transaction transaction = transactionRepository.findActiveTransactionById(transactionId).orElseThrow(
+        UUID userId = currentUserProvider.getCurrentUserId();
+        log.debug("Обновление транзакции: transactionId={}, userId={}", transactionId, userId);
+        Transaction transaction = transactionRepository.findActiveTransactionByIdAndUserId(transactionId, userId).orElseThrow(
                 () -> new TransactionNotFoundException("Транзакция с id=" + transactionId + " не найдена")
         );
 
         if (dto.categoryId() != null) {
-            Category category = categoryService.findById(dto.categoryId());
+            Category category = categoryService.findAvailableCategoryById(dto.categoryId());
             if (!transaction.getUserId().equals(category.getUserId())) {
                 throw new CategoryNotFoundException("Категория с id=" + dto.categoryId() + " не найдена");
             }
-            log.debug("Загружена категория: categoryId={}", category.getId());
+            log.debug("Загружена категория: categoryId={}, userId={}", category.getId(), userId);
             transaction.setCategory(category);
         }
         if (dto.currencyId() != null) {
             Currency currency = currencyService.findById(dto.currencyId());
-            log.debug("Загружена валюта: currencyId={}", currency.getId());
+            log.debug("Загружена валюта: currencyId={}, userId={}", currency.getId(), userId);
             transaction.setCurrency(currency);
         }
         if (dto.amount() != null) {
@@ -140,7 +134,7 @@ public class TransactionServiceImpl implements TransactionService {
             transaction.setCreatedDate(dto.createdDate());
         }
         Transaction savedTransaction = transactionRepository.save(transaction);
-        log.info("Транзакция успешно обновлена: transactionId={}", savedTransaction.getId());
+        log.info("Транзакция успешно обновлена: transactionId={}, userId={}", savedTransaction.getId(), userId);
 
         return transactionMapper.mapTransactionToTransactionResponseDto(savedTransaction);
     }
@@ -148,8 +142,11 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional
     public void softRemoveTransaction(UUID transactionId) {
-        log.info("Удаление транзакции: transactionId={}", transactionId);
-        transactionRepository.softRemoveTransaction(transactionId);
-        log.info("Успешное удаление транзакции: transactionId={}", transactionId);
+        UUID userId = currentUserProvider.getCurrentUserId();
+        log.debug("Удаление транзакции: transactionId={}, userId={}", transactionId, userId);
+        if (transactionRepository.softRemoveTransaction(transactionId, userId) == 0) {
+            throw new TransactionNotFoundException("Транзакция с id=" + transactionId + " не найдена");
+        }
+        log.info("Успешное удаление транзакции: transactionId={}, userId={}", transactionId, userId);
     }
 }

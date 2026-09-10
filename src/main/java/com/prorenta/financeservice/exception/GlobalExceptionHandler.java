@@ -5,10 +5,12 @@ import com.prorenta.financeservice.model.dto.MappingErrorDto;
 import feign.FeignException;
 import feign.RetryableException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -32,7 +34,7 @@ public class GlobalExceptionHandler {
             UserNotFoundException.class,
             NoResourceFoundException.class
     })
-    public ResponseEntity<ErrorDto> handleNotFoundException(RuntimeException ex) {
+    public ResponseEntity<ErrorDto> handleNotFoundException(Exception ex) {
         log.warn("Ресурс не найден: {}", ex.getMessage());
         ErrorDto errorDto = ErrorDto.builder()
                 .status(HttpStatus.NOT_FOUND)
@@ -42,9 +44,21 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorDto);
     }
 
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorDto> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
+        ErrorDto errorDto = ErrorDto.builder()
+                .status(HttpStatus.METHOD_NOT_ALLOWED)
+                .message("HTTP-метод не поддерживается для этого ресурса")
+                .zonedDateTime(ZonedDateTime.now())
+                .build();
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+                .headers(ex.getHeaders())
+                .body(errorDto);
+    }
+
     @ExceptionHandler(LimitExceededException.class)
     public ResponseEntity<ErrorDto> handleLimitExceededException(LimitExceededException ex) {
-        log.warn("Лимит исчерпан: {}", ex.getMessage());
+        log.warn("Лимит превышен: {}", ex.getMessage());
         ErrorDto errorDto = ErrorDto.builder()
                 .status(HttpStatus.BAD_REQUEST)
                 .message(ex.getMessage())
@@ -101,6 +115,17 @@ public class GlobalExceptionHandler {
                 .message("Некорректное тело запроса: проверьте синтаксис JSON и переданные типы данных")
                 .build();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorDto);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorDto> handleDataIntegrityViolationException(DataIntegrityViolationException ex) {
+        log.warn("Нарушение уникальности имен: {}", ex.getMessage());
+        ErrorDto errorDto = ErrorDto.builder()
+                .status(HttpStatus.CONFLICT)
+                .message("Конфликт данных: запись с такими параметрами уже существует")
+                .zonedDateTime(ZonedDateTime.now())
+                .build();
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorDto);
     }
 
     @ExceptionHandler(FeignException.FeignServerException.class)
