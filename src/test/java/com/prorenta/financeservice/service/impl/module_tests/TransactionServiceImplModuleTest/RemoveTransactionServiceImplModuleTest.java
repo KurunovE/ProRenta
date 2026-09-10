@@ -1,8 +1,9 @@
 package com.prorenta.financeservice.service.impl.module_tests.TransactionServiceImplModuleTest;
 
+import com.prorenta.financeservice.factory.UserInfoDataFactory;
+import com.prorenta.financeservice.security.CurrentUserProvider;
 import com.prorenta.financeservice.controller.impl.TransactionControllerImpl;
 import com.prorenta.financeservice.exception.GlobalExceptionHandler;
-import com.prorenta.financeservice.integration.UserFeignClient;
 import com.prorenta.financeservice.mapper.TransactionMapperImpl;
 import com.prorenta.financeservice.repository.TransactionRepository;
 import com.prorenta.financeservice.service.CategoryService;
@@ -49,7 +50,7 @@ public class RemoveTransactionServiceImplModuleTest {
     private CurrencyService currencyService;
 
     @MockitoBean
-    private UserFeignClient userFeignClient;
+    private CurrentUserProvider currentUserProvider;
 
     @Test
     @SneakyThrows
@@ -57,19 +58,27 @@ public class RemoveTransactionServiceImplModuleTest {
     public void softRemoveTransactionSuccessfully() {
         UUID transactionId = UUID.randomUUID();
 
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
+        Mockito.when(transactionRepository.softRemoveTransaction(transactionId, currentUserProvider.getCurrentUserId()))
+                .thenReturn(1);
+
         MvcResult mvcResult = mockMvc.perform(delete("/api/v1/transactions/{id}", transactionId))
                 .andReturn();
 
         Assertions.assertThat(mvcResult.getResponse().getStatus())
                 .isEqualTo(HttpStatus.NO_CONTENT.value());
 
-        Mockito.verify(transactionRepository, Mockito.times(1)).softRemoveTransaction(transactionId);
+        Mockito.verify(transactionRepository, Mockito.times(1)).softRemoveTransaction(transactionId, currentUserProvider.getCurrentUserId());
     }
 
     @Test
     @SneakyThrows
     @DisplayName("Удаление транзакции: ошибка 400 (Невалидный формат UUID)")
     public void softRemoveTransactionInvalidUuidFormat() {
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
+
         MvcResult mvcResult = mockMvc.perform(delete("/api/v1/transactions/{id}", "invalid-uuid"))
                 .andReturn();
 

@@ -8,8 +8,8 @@ import com.prorenta.financeservice.model.entity.Category;
 import java.util.UUID;
 
 public interface CategoryService {
-    Category findById(UUID id);
+    Category findAvailableCategoryById(UUID id);
     CategoryResponseDto createCategory(CreateCategoryRequestDto dto);
-    GetAllCategoriesResponseDto getAllCategoriesByUserId(UUID userId);
+    GetAllCategoriesResponseDto getCurrentUserCategories();
     void softRemoveCategory(UUID categoryId);
 }

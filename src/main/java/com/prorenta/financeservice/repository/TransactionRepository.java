@@ -18,15 +18,18 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
             SELECT t
             FROM Transaction t
             WHERE t.id = :transactionId
+                AND t.userId = :userId
                 AND t.isDeleted = false
             """)
-    Optional<Transaction> findActiveTransactionById(@Param("transactionId") UUID transactionId);
+    Optional<Transaction> findActiveTransactionByIdAndUserId(@Param("transactionId") UUID transactionId, @Param("userId") UUID userId);
 
     @Modifying
     @Query("""
             UPDATE Transaction t
             SET t.isDeleted = true
             WHERE t.id = :transactionId
+                AND t.userId = :userId
+                AND t.isDeleted = false
             """)
-    void softRemoveTransaction(@Param("transactionId") UUID transactionId);
+    int softRemoveTransaction(@Param("transactionId") UUID transactionId, @Param("userId") UUID userId);
 }

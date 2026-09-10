@@ -1,18 +1,17 @@
 package com.prorenta.financeservice.service.impl.integration_tests.CurrencyServiceImplIntegrationTest;
 
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import com.prorenta.financeservice.security.CurrentUserProvider;
 import com.prorenta.financeservice.repository.CurrencyRepository;
 import com.prorenta.financeservice.service.CurrencyService;
 import com.prorenta.financeservice.service.impl.integration_tests.AbstractIntegrationTest;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.CacheManager;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.context.jdbc.Sql;
 
-import java.util.Objects;
 import java.util.UUID;
 
 public class GetCurrencyServiceImplCacheIntegrationTest extends AbstractIntegrationTest {
@@ -23,16 +22,8 @@ public class GetCurrencyServiceImplCacheIntegrationTest extends AbstractIntegrat
     @MockitoSpyBean
     private CurrencyRepository currencyRepository;
 
-    @Autowired
-    private CacheManager cacheManager;
-
-    @BeforeEach
-    public void setUpCache() {
-        cacheManager.getCacheNames().forEach(
-                cacheName -> Objects.requireNonNull(cacheManager.getCache(cacheName)).clear()
-        );
-        Mockito.reset(currencyRepository);
-    }
+    @MockitoBean
+    private CurrentUserProvider currentUserProvider;
 
     @Test
     @Sql(

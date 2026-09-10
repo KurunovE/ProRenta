@@ -1,5 +1,9 @@
 package com.prorenta.financeservice.service.impl.integration_tests.TransactionServiceImplIntegrationTest;
 
+import com.prorenta.financeservice.factory.UserInfoDataFactory;
+import org.mockito.Mockito;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import com.prorenta.financeservice.security.CurrentUserProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.prorenta.financeservice.model.dto.FilterTransactionsResponseDto;
 import com.prorenta.financeservice.service.impl.integration_tests.AbstractIntegrationTest;
@@ -20,6 +24,9 @@ public class GetTransactionServiceImplIntegrationTest extends AbstractIntegratio
     @Autowired
     private ObjectMapper objectMapper;
 
+    @MockitoBean
+    private CurrentUserProvider currentUserProvider;
+
     @Test
     @Sql(
             scripts = {
@@ -31,6 +38,9 @@ public class GetTransactionServiceImplIntegrationTest extends AbstractIntegratio
     @SneakyThrows
     @DisplayName("Получение транзакции: фильтрация без параметров")
     public void getAllActiveTransactionsTest() {
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
+
         MvcResult mvcResult = mockMvc.perform(get("/api/v1/transactions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .characterEncoding("UTF-8"))
@@ -60,6 +70,9 @@ public class GetTransactionServiceImplIntegrationTest extends AbstractIntegratio
     @SneakyThrows
     @DisplayName("Получение транзакции: фильтрация строго по имени категории")
     public void getTransactionsByCategoryNameTest() {
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
+
         MvcResult mvcResult = mockMvc.perform(get("/api/v1/transactions")
                         .param("categoryName", "Продукты")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -93,6 +106,9 @@ public class GetTransactionServiceImplIntegrationTest extends AbstractIntegratio
     @SneakyThrows
     @DisplayName("Получение транзакции: фильтрация по диапазону дат с пагинацией и сортировкой")
     public void getTransactionsByDateRangeTest() {
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
+
         MvcResult mvcResult = mockMvc.perform(get("/api/v1/transactions")
                         .param("startCreatedDate", "2026-08-01")
                         .param("endCreatedDate", "2026-08-31")
@@ -114,5 +130,4 @@ public class GetTransactionServiceImplIntegrationTest extends AbstractIntegratio
         Assertions.assertThat(actual.transactions().get(0).categoryName()).isEqualTo("Зарплата");
         Assertions.assertThat(actual.transactions().get(1).categoryName()).isEqualTo("Продукты");
     }
-
 }

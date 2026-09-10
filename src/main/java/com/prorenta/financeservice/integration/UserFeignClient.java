@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import java.util.UUID;
 
 @FeignClient(
-        name = "finance-service",
+        name = "user-service",
         url = "${user.service.url}"
 )
 public interface UserFeignClient {

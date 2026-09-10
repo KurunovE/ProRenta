@@ -1,10 +1,11 @@
 package com.prorenta.financeservice.service.impl.module_tests.CategoryServiceImplModuleTest;
 
+import com.prorenta.financeservice.factory.UserInfoDataFactory;
+import com.prorenta.financeservice.security.CurrentUserProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.prorenta.financeservice.controller.impl.CategoryControllerImpl;
 import com.prorenta.financeservice.exception.GlobalExceptionHandler;
 import com.prorenta.financeservice.factory.CategoryDataFactory;
-import com.prorenta.financeservice.integration.UserFeignClient;
 import com.prorenta.financeservice.mapper.CategoryMapperImpl;
 import com.prorenta.financeservice.model.dto.GetAllCategoriesResponseDto;
 import com.prorenta.financeservice.model.entity.Category;
@@ -50,19 +51,21 @@ public class GetCategoryServiceImplModuleTest {
     private CategoryRepository categoryRepository;
 
     @MockitoBean
-    private UserFeignClient userFeignClient;
+    private CurrentUserProvider currentUserProvider;
 
     @Test
     @SneakyThrows
     @DisplayName("Получение заполненого списка категорий: успешно")
     public void getAllCategoriesByUserIdSuccessfully() {
-        UUID userId = UUID.randomUUID();
+        UUID userId = UserInfoDataFactory.DEFAULT_USER_ID;
         Category category = CategoryDataFactory.createDefaultCategory(userId);
 
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
         Mockito.when(categoryRepository.findAllByUserId(Mockito.any(UUID.class)))
                 .thenReturn(List.of(category));
 
-        MvcResult mvcResult = mockMvc.perform(get("/api/v1/categories/" + userId)
+        MvcResult mvcResult = mockMvc.perform(get("/api/v1/categories")
                         .contentType(MediaType.APPLICATION_JSON)
                         .characterEncoding("UTF-8"))
                 .andReturn();
@@ -92,11 +95,12 @@ public class GetCategoryServiceImplModuleTest {
     @SneakyThrows
     @DisplayName("Получение пустого списка категорий: успешно")
     public void getAllCategoriesByUserIdEmptyList() {
-        UUID userId = UUID.randomUUID();
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
         Mockito.when(categoryRepository.findAllByUserId(Mockito.any(UUID.class)))
                 .thenReturn(List.of());
 
-        MvcResult mvcResult = mockMvc.perform(get("/api/v1/categories/" + userId)
+        MvcResult mvcResult = mockMvc.perform(get("/api/v1/categories")
                         .contentType(MediaType.APPLICATION_JSON)
                         .characterEncoding("UTF-8"))
                 .andReturn();
@@ -118,8 +122,11 @@ public class GetCategoryServiceImplModuleTest {
 
     @Test
     @SneakyThrows
-    @DisplayName("Получение списка категорий: ошибка 400 (Отсутствует обязательный параметр userId)")
+    @DisplayName("Получение категорий: маршрут с завершающим слешем не существует")
     public void getAllCategoriesMissingUserIdParam() {
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
+
         MvcResult mvcResult = mockMvc.perform(get("/api/v1/categories/")
                         .contentType(MediaType.APPLICATION_JSON)
                         .characterEncoding("UTF-8"))
@@ -133,9 +140,12 @@ public class GetCategoryServiceImplModuleTest {
 
     @Test
     @SneakyThrows
-    @DisplayName("Получение списка категорий: ошибка 400 (Невалидный формат UUID)")
-    public void getAllCategoriesInvalidUuidFormat() {
+    @DisplayName("Получение категорий: старый маршрут выбора пользователя недоступен")
+    public void cannotSelectUserThroughLegacyCategoryRoute() {
         String invalidUuid = "12345-invalid-string";
+
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
 
         MvcResult mvcResult = mockMvc.perform(get("/api/v1/categories/" + invalidUuid)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -143,7 +153,7 @@ public class GetCategoryServiceImplModuleTest {
                 .andReturn();
 
         Assertions.assertThat(mvcResult.getResponse().getStatus())
-                .isEqualTo(HttpStatus.BAD_REQUEST.value());
+                .isEqualTo(HttpStatus.METHOD_NOT_ALLOWED.value());
 
         Mockito.verifyNoInteractions(categoryRepository);
     }

@@ -1,5 +1,9 @@
 package com.prorenta.financeservice.service.impl.integration_tests.CategoryServiceImplIntegrationTest;
 
+import com.prorenta.financeservice.factory.UserInfoDataFactory;
+import org.mockito.Mockito;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import com.prorenta.financeservice.security.CurrentUserProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.prorenta.financeservice.model.dto.GetAllCategoriesResponseDto;
 import com.prorenta.financeservice.service.impl.integration_tests.AbstractIntegrationTest;
@@ -22,6 +26,9 @@ public class GetCategoryServiceImplIntegrationTest extends AbstractIntegrationTe
     @Autowired
     private ObjectMapper objectMapper;
 
+    @MockitoBean
+    private CurrentUserProvider currentUserProvider;
+
     @Test
     @Sql(
             scripts = {
@@ -33,9 +40,10 @@ public class GetCategoryServiceImplIntegrationTest extends AbstractIntegrationTe
     @SneakyThrows
     @DisplayName("Получение категории: успешно")
     public void getAllCategoriesByUserIdTest() {
-        UUID userId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
 
-        MvcResult mvcResult = mockMvc.perform(get("/api/v1/categories/{userId}", userId)
+        MvcResult mvcResult = mockMvc.perform(get("/api/v1/categories")
                         .contentType(MediaType.APPLICATION_JSON)
                         .characterEncoding("UTF-8"))
                 .andReturn();
@@ -67,7 +75,10 @@ public class GetCategoryServiceImplIntegrationTest extends AbstractIntegrationTe
     public void getAllCategoriesForUnknownUserTest() {
         UUID unknownUserId = UUID.randomUUID();
 
-        MvcResult mvcResult = mockMvc.perform(get("/api/v1/categories/{userId}", unknownUserId)
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(unknownUserId);
+
+        MvcResult mvcResult = mockMvc.perform(get("/api/v1/categories")
                         .contentType(MediaType.APPLICATION_JSON)
                         .characterEncoding("UTF-8"))
                 .andReturn();
@@ -87,9 +98,12 @@ public class GetCategoryServiceImplIntegrationTest extends AbstractIntegrationTe
 
     @Test
     @SneakyThrows
-    @DisplayName("Получение категории: невалидный ID")
-    public void getAllCategoriesInvalidUuidTest() {
+    @DisplayName("Получение категорий: старый маршрут выбора пользователя недоступен")
+    public void cannotSelectUserThroughLegacyCategoryRoute() {
         String invalidUuid = "not-a-valid-uuid";
+
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
 
         MvcResult mvcResult = mockMvc.perform(get("/api/v1/categories/{userId}", invalidUuid)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -97,6 +111,6 @@ public class GetCategoryServiceImplIntegrationTest extends AbstractIntegrationTe
                 .andReturn();
 
         Assertions.assertThat(mvcResult.getResponse().getStatus())
-                .isEqualTo(HttpStatus.BAD_REQUEST.value());
+                .isEqualTo(HttpStatus.METHOD_NOT_ALLOWED.value());
     }
 }

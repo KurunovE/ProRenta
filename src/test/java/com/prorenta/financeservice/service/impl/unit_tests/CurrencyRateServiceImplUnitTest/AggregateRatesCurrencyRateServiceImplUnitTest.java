@@ -156,7 +156,8 @@ public class AggregateRatesCurrencyRateServiceImplUnitTest {
     @Test
     @DisplayName("Агрегация курсов: безопасное завершение при null от клиента")
     public void aggregateRatesNullResponseTest() {
-        Mockito.when(cbrFeignClient.getDailyRates(null)).thenReturn(null);
+        Mockito.when(cbrFeignClient.getDailyRates(null))
+                .thenReturn(null);
 
         currencyRateService.aggregateRates();
 
@@ -169,6 +170,7 @@ public class AggregateRatesCurrencyRateServiceImplUnitTest {
     public void aggregateRatesFeignClientExceptionTest() {
         Mockito.when(cbrFeignClient.getDailyRates(null))
                 .thenThrow(new RuntimeException("CBR API connection timeout"));
+
         Assertions.assertDoesNotThrow(() -> currencyRateService.aggregateRates());
 
         Mockito.verifyNoInteractions(currencyService);

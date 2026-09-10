@@ -1,5 +1,6 @@
 package com.prorenta.financeservice.service.impl.module_tests.TransactionServiceImplModuleTest;
 
+import com.prorenta.financeservice.security.CurrentUserProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.prorenta.financeservice.controller.impl.TransactionControllerImpl;
 import com.prorenta.financeservice.exception.GlobalExceptionHandler;
@@ -7,7 +8,6 @@ import com.prorenta.financeservice.factory.CategoryDataFactory;
 import com.prorenta.financeservice.factory.CurrencyDataFactory;
 import com.prorenta.financeservice.factory.TransactionDataFactory;
 import com.prorenta.financeservice.factory.UserInfoDataFactory;
-import com.prorenta.financeservice.integration.UserFeignClient;
 import com.prorenta.financeservice.mapper.TransactionMapperImpl;
 import com.prorenta.financeservice.model.dto.FilterTransactionsResponseDto;
 import com.prorenta.financeservice.model.dto.UserInfoDto;
@@ -68,19 +68,21 @@ public class GetTransactionServiceImplModuleTest {
     private CurrencyService currencyService;
 
     @MockitoBean
-    private UserFeignClient userFeignClient;
+    private CurrentUserProvider currentUserProvider;
 
     @Test
     @SneakyThrows
     @DisplayName("Получение списка транзакций: успешно (HTTP 200)")
     public void getTransactionsSuccessfully() {
         UserInfoDto userInfoDto = UserInfoDataFactory.createDefaultUserInfoDto();
-        Category category = CategoryDataFactory.createDefaultCategory(userInfoDto.id());
+        Category category = CategoryDataFactory.createDefaultCategory(userInfoDto.userId());
         Currency currency = CurrencyDataFactory.createDefaultCurrency();
-        Transaction transaction = TransactionDataFactory.createDefaultTransaction(userInfoDto.id(), category, currency);
+        Transaction transaction = TransactionDataFactory.createDefaultTransaction(userInfoDto.userId(), category, currency);
 
         Page<Transaction> page = new PageImpl<>(List.of(transaction), PageRequest.of(0, 10), 1);
 
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
         Mockito.when(transactionRepository.findAll(Mockito.<Specification<Transaction>>any(), Mockito.any(Pageable.class)))
                 .thenReturn(page);
 
@@ -115,6 +117,8 @@ public class GetTransactionServiceImplModuleTest {
     public void getTransactionsEmptyList() {
         Page<Transaction> emptyPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 0);
 
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
         Mockito.when(transactionRepository.findAll(Mockito.<Specification<Transaction>>any(), Mockito.any(Pageable.class)))
                 .thenReturn(emptyPage);
 
@@ -138,8 +142,11 @@ public class GetTransactionServiceImplModuleTest {
 
     @Test
     @SneakyThrows
-    @DisplayName("Получение списка транзакций: ошибка валидации DTO (HTTP 400)")
+    @DisplayName("Получение списка транзакций: ошибка валидации DTO")
     public void getTransactionsWithValidationException() {
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
+
         MvcResult mvcResult = mockMvc.perform(get("/api/v1/transactions")
                         .param("sortDirection", "INVALID_DIR")
                         .param("fieldSort", "INVALID_FIELD")
@@ -157,6 +164,9 @@ public class GetTransactionServiceImplModuleTest {
     @SneakyThrows
     @DisplayName("Получение списка транзакций: невалидный период дат")
     public void getTransactionsWithInvalidPeriod() {
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
+
         MvcResult mvcResult = mockMvc.perform(get("/api/v1/transactions")
                         .param("startCreatedDate", "2026-10-01")
                         .param("endCreatedDate", "2026-09-01")

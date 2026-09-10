@@ -11,7 +11,7 @@ public class UserInfoDataFactory {
 
     public static UserInfoDto createDefaultUserInfoDto() {
         return UserInfoDto.builder()
-                .id(DEFAULT_USER_ID)
+                .userId(DEFAULT_USER_ID)
                 .name(DEFAULT_USERNAME)
                 .build();
     }

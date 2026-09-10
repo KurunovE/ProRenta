@@ -1,5 +1,7 @@
 package com.prorenta.financeservice.service.impl.integration_tests.CurrencyRateServiceImplIntegrationTest;
 
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import com.prorenta.financeservice.security.CurrentUserProvider;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.prorenta.financeservice.factory.CbrApiDataFactory;
 import com.prorenta.financeservice.model.entity.CurrencyRate;
@@ -27,6 +29,9 @@ public class AggregateRatesCurrencyRateServiceImplIntegrationTest extends Abstra
     @Autowired
     private CurrencyRateRepository currencyRateRepository;
 
+    @MockitoBean
+    private CurrentUserProvider currentUserProvider;
+
     @Test
     @Sql(
             scripts = {
@@ -35,7 +40,7 @@ public class AggregateRatesCurrencyRateServiceImplIntegrationTest extends Abstra
             },
             executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD
     )
-    @DisplayName("Интеграционный тест: Успешная агрегация курсов валют (парсинг XML от ЦБ РФ)")
+    @DisplayName("Интеграционный тест: успешная агрегация курсов валют")
     public void aggregateRatesSuccessfully() {
         String xmlResponse = CbrApiDataFactory.cbrFeignClientResponse;
 

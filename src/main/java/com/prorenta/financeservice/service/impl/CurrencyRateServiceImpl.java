@@ -35,7 +35,7 @@ public class CurrencyRateServiceImpl implements CurrencyRateService {
     @Override
     @Transactional
     public void aggregateRates() {
-        log.info("Запуск планировщика: синхронизация курсов валют");
+        log.debug("Начало синхронизации курсов валют");
         try {
             ValCursResponseDto response = cbrFeignClient.getDailyRates(null);
 
@@ -75,7 +75,7 @@ public class CurrencyRateServiceImpl implements CurrencyRateService {
                 }
                 log.info("Успешно агрегировано и сохранено {} курсов валют", updatedCount);
             } else {
-                log.warn("API ЦБ РФ вернул пустой ответ или данные недоступны");
+                log.warn("Пустой ответ или данные недоступны");
             }
 
         } catch (Exception e) {
@@ -90,7 +90,7 @@ public class CurrencyRateServiceImpl implements CurrencyRateService {
             LocalDate startDate,
             LocalDate endDate
     ) {
-        log.debug("Получение списка куросв валюты {} за период c {} по {}",
+        log.debug("Получение списка курсов валюты {} за период c {} по {}",
                 currencyCode, startDate, endDate);
 
         if (endDate.isBefore(startDate)) {

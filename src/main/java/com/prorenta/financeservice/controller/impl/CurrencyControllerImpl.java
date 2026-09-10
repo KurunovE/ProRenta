@@ -24,7 +24,7 @@ public class CurrencyControllerImpl implements CurrencyController {
 
     @Override
     public ResponseEntity<ListCurrenciesResponseDto> getCurrencies() {
-        log.debug("Запрос на получения всех валют");
+        log.debug("Запрос на получение всех валют");
         ListCurrenciesResponseDto listCurrenciesResponseDto = currencyService.getCurrencies();
         return ResponseEntity.ok(listCurrenciesResponseDto);
     }

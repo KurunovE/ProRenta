@@ -10,15 +10,18 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 public class TransactionFilterSpecification {
     public static Specification<Transaction> buildFilter(
+            UUID userId,
             String categoryName,
             LocalDate startCreatedDate,
             LocalDate endCreatedDate
     ) {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
+            predicates.add(criteriaBuilder.equal(root.get("userId"), userId));
 
             if (categoryName != null && !categoryName.trim().isEmpty()) {
                 Join<Transaction, Category> categoryJoin = root.join("category");

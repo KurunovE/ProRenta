@@ -1,5 +1,7 @@
 package com.prorenta.financeservice.service.impl.unit_tests.CategoryServiceImplUnitTest;
 
+import com.prorenta.financeservice.factory.UserInfoDataFactory;
+import com.prorenta.financeservice.security.CurrentUserProvider;
 import com.prorenta.financeservice.mapper.CategoryMapperImpl;
 import com.prorenta.financeservice.model.dto.GetAllCategoriesResponseDto;
 import com.prorenta.financeservice.model.entity.Category;
@@ -36,16 +38,21 @@ public class GetCategoryServiceImplUnitTest {
     @MockitoBean
     private CategoryRepository categoryRepository;
 
+    @MockitoBean
+    private CurrentUserProvider currentUserProvider;
+
     @Test
     @DisplayName("Получение всех категорий пользователя: успешно (список не пуст)")
     public void getAllCategoriesByUserIdSuccessfulTest() {
-        UUID userId = UUID.randomUUID();
+        UUID userId = UserInfoDataFactory.DEFAULT_USER_ID;
         Category category = createDefaultCategory(userId);
 
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
         Mockito.when(categoryRepository.findAllByUserId(userId))
                 .thenReturn(List.of(category));
 
-        GetAllCategoriesResponseDto actual = categoryService.getAllCategoriesByUserId(userId);
+        GetAllCategoriesResponseDto actual = categoryService.getCurrentUserCategories();
 
         Assertions.assertNotNull(actual);
         Assertions.assertNotNull(actual.categories());
@@ -56,12 +63,14 @@ public class GetCategoryServiceImplUnitTest {
     @Test
     @DisplayName("Получение всех категорий пользователя: пустой список")
     public void getAllCategoriesByUserIdEmptyListTest() {
-        UUID userId = UUID.randomUUID();
+        UUID userId = UserInfoDataFactory.DEFAULT_USER_ID;
 
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
         Mockito.when(categoryRepository.findAllByUserId(userId))
                 .thenReturn(List.of());
 
-        GetAllCategoriesResponseDto actual = categoryService.getAllCategoriesByUserId(userId);
+        GetAllCategoriesResponseDto actual = categoryService.getCurrentUserCategories();
 
         Assertions.assertNotNull(actual);
         Assertions.assertNotNull(actual.categories());

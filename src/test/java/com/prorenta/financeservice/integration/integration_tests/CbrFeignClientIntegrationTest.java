@@ -1,5 +1,7 @@
 package com.prorenta.financeservice.integration.integration_tests;
 
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import com.prorenta.financeservice.security.CurrentUserProvider;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.prorenta.financeservice.factory.CbrApiDataFactory;
 import com.prorenta.financeservice.integration.CbrFeignClient;
@@ -18,6 +20,9 @@ public class CbrFeignClientIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private CbrFeignClient cbrFeignClient;
+
+    @MockitoBean
+    private CurrentUserProvider currentUserProvider;
 
     @Test
     @DisplayName("Получение курсов валют: успешно")

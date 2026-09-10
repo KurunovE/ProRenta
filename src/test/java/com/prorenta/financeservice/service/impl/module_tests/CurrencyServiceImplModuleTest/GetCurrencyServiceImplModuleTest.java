@@ -10,6 +10,7 @@ import com.prorenta.financeservice.model.dto.ErrorDto;
 import com.prorenta.financeservice.model.dto.ListCurrenciesResponseDto;
 import com.prorenta.financeservice.model.entity.Currency;
 import com.prorenta.financeservice.repository.CurrencyRepository;
+import com.prorenta.financeservice.service.CurrencyRateService;
 import com.prorenta.financeservice.service.impl.CurrencyServiceImpl;
 import lombok.SneakyThrows;
 import org.assertj.core.api.Assertions;
@@ -50,6 +51,9 @@ public class GetCurrencyServiceImplModuleTest {
 
     @MockitoBean
     private CurrencyRepository currencyRepository;
+
+    @MockitoBean
+    private CurrencyRateService currencyRateService;
 
     @Test
     @SneakyThrows
@@ -142,7 +146,7 @@ public class GetCurrencyServiceImplModuleTest {
 
     @Test
     @SneakyThrows
-    @DisplayName("Получение валюты по ID: валюта не найдена (404)")
+    @DisplayName("Получение валюты по ID: валюта не найдена")
     public void getCurrencyByIdNotFound() {
         UUID currencyId = UUID.randomUUID();
         String message = "Валюта с id=" + currencyId + " не найдена";
@@ -176,7 +180,7 @@ public class GetCurrencyServiceImplModuleTest {
 
     @Test
     @SneakyThrows
-    @DisplayName("Получение валюты по ID: ошибка 400 (Невалидный формат UUID)")
+    @DisplayName("Получение валюты по ID: ошибка 400")
     public void getCurrencyByIdInvalidUuidFormat() {
         String invalidUuid = "12345-invalid-string";
 

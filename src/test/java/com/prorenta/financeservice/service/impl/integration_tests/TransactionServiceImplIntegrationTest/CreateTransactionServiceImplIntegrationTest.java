@@ -1,11 +1,13 @@
 package com.prorenta.financeservice.service.impl.integration_tests.TransactionServiceImplIntegrationTest;
 
+import org.mockito.Mockito;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import com.prorenta.financeservice.security.CurrentUserProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.prorenta.financeservice.factory.CategoryDataFactory;
 import com.prorenta.financeservice.factory.CurrencyDataFactory;
 import com.prorenta.financeservice.factory.UserInfoDataFactory;
 import com.prorenta.financeservice.service.impl.integration_tests.AbstractIntegrationTest;
-import com.prorenta.financeservice.service.impl.integration_tests.util.UserClientHelper;
 import com.prorenta.financeservice.model.dto.CreateTransactionRequestDto;
 import com.prorenta.financeservice.model.dto.TransactionResponseDto;
 import lombok.SneakyThrows;
@@ -27,10 +29,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 public class CreateTransactionServiceImplIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
-    private UserClientHelper userClientHelper;
-
-    @Autowired
     private ObjectMapper objectMapper;
+
+    @MockitoBean
+    private CurrentUserProvider currentUserProvider;
 
     @Test
     @Sql(
@@ -44,12 +46,10 @@ public class CreateTransactionServiceImplIntegrationTest extends AbstractIntegra
     @SneakyThrows
     @DisplayName("Создание транзакции: успешно")
     public void createTransactionSuccessfulTest() {
-        UUID userId = UserInfoDataFactory.DEFAULT_USER_ID;
         UUID categoryId = CategoryDataFactory.DEFAULT_CATEGORY_ID;
         UUID currencyId = CurrencyDataFactory.DEFAULT_CURRENCY_ID;
 
         CreateTransactionRequestDto requestDto = CreateTransactionRequestDto.builder()
-                .userId(userId)
                 .categoryId(categoryId)
                 .currencyId(currencyId)
                 .amount(BigDecimal.valueOf(1500.50))
@@ -58,7 +58,8 @@ public class CreateTransactionServiceImplIntegrationTest extends AbstractIntegra
                 .createdDate(LocalDate.now())
                 .build();
 
-        userClientHelper.mockUserInfo(userId);
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
 
         MvcResult mvcResult = mockMvc.perform(post("/api/v1/transactions")
                         .content(objectMapper.writeValueAsString(requestDto))
@@ -93,14 +94,12 @@ public class CreateTransactionServiceImplIntegrationTest extends AbstractIntegra
             executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD
     )
     @SneakyThrows
-    @DisplayName("Создание транзакции: сбой UserFeignClient")
-    public void createTransactionUserFeignErrorTest() {
-        UUID userId = UserInfoDataFactory.DEFAULT_USER_ID;
+    @DisplayName("Создание транзакции: отсутствует профиль текущего пользователя")
+    public void createTransactionMissingUserProfileTest() {
         UUID categoryId = CategoryDataFactory.DEFAULT_CATEGORY_ID;
         UUID currencyId = CurrencyDataFactory.DEFAULT_CURRENCY_ID;
 
         CreateTransactionRequestDto requestDto = CreateTransactionRequestDto.builder()
-                .userId(userId)
                 .categoryId(categoryId)
                 .currencyId(currencyId)
                 .amount(java.math.BigDecimal.valueOf(1500.50))
@@ -109,7 +108,8 @@ public class CreateTransactionServiceImplIntegrationTest extends AbstractIntegra
                 .createdDate(java.time.LocalDate.now())
                 .build();
 
-        userClientHelper.mockUserInfoServerError(userId);
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenThrow(new com.prorenta.financeservice.exception.UserNotFoundException("Профиль пользователя не найден"));
 
         MvcResult mvcResult = mockMvc.perform(post("/api/v1/transactions")
                         .content(objectMapper.writeValueAsString(requestDto))
@@ -118,6 +118,6 @@ public class CreateTransactionServiceImplIntegrationTest extends AbstractIntegra
                 .andReturn();
 
         Assertions.assertThat(mvcResult.getResponse().getStatus())
-                .isEqualTo(HttpStatus.BAD_GATEWAY.value());
+                .isEqualTo(HttpStatus.NOT_FOUND.value());
     }
 }

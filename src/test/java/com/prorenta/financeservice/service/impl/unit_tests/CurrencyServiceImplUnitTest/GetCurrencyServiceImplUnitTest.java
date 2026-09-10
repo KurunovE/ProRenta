@@ -42,6 +42,7 @@ public class GetCurrencyServiceImplUnitTest {
     @DisplayName("Получение валюты по ID: успешно")
     public void getCurrencySuccessfulTest() {
         Currency currency = createDefaultCurrency();
+
         Mockito.when(currencyRepository.findById(DEFAULT_CURRENCY_ID))
                 .thenReturn(Optional.of(currency));
 
@@ -57,6 +58,7 @@ public class GetCurrencyServiceImplUnitTest {
     @DisplayName("Получение валюты по ID: валюта не найдена")
     public void getCurrencyNotFoundTest() {
         String expectedMessage = "Валюта с id=" + DEFAULT_CURRENCY_ID + " не найдена";
+
         Mockito.when(currencyRepository.findById(DEFAULT_CURRENCY_ID))
                 .thenReturn(Optional.empty());
 
@@ -72,6 +74,7 @@ public class GetCurrencyServiceImplUnitTest {
     @DisplayName("Получение списка валют: успешно (список не пуст)")
     public void getCurrenciesSuccessfulTest() {
         Currency currency = createDefaultCurrency();
+
         Mockito.when(currencyRepository.findAllActiveCurrencies())
                 .thenReturn(List.of(currency));
 

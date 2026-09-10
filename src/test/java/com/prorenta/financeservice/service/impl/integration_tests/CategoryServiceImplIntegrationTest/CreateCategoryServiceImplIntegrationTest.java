@@ -1,11 +1,13 @@
 package com.prorenta.financeservice.service.impl.integration_tests.CategoryServiceImplIntegrationTest;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.prorenta.financeservice.factory.UserInfoDataFactory;
+import org.mockito.Mockito;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import com.prorenta.financeservice.security.CurrentUserProvider;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.prorenta.financeservice.model.dto.CreateCategoryRequestDto;
 import com.prorenta.financeservice.model.enums.CategoryType;
 import com.prorenta.financeservice.service.impl.integration_tests.AbstractIntegrationTest;
-import com.prorenta.financeservice.service.impl.integration_tests.util.UserClientHelper;
 import lombok.SneakyThrows;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
@@ -16,8 +18,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MvcResult;
 
-import java.util.UUID;
-
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 public class CreateCategoryServiceImplIntegrationTest extends AbstractIntegrationTest {
@@ -25,8 +25,8 @@ public class CreateCategoryServiceImplIntegrationTest extends AbstractIntegratio
     @Autowired
     private ObjectMapper objectMapper;
 
-    @Autowired
-    private UserClientHelper userClientHelper;
+    @MockitoBean
+    private CurrentUserProvider currentUserProvider;
 
     @Test
     @Sql(
@@ -37,17 +37,15 @@ public class CreateCategoryServiceImplIntegrationTest extends AbstractIntegratio
             executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD
     )
     @SneakyThrows
-    @DisplayName("Создание категории: дубликат категории (нарушение UNIQUE constraint БД)")
+    @DisplayName("Создание категории: дубликат категории")
     public void createCategoryDuplicateNameTest() {
-        UUID userId = UserInfoDataFactory.DEFAULT_USER_ID;
-
         CreateCategoryRequestDto requestDto = CreateCategoryRequestDto.builder()
-                .userId(userId)
                 .name("Продукты")
                 .type(CategoryType.EXPENSE)
                 .build();
 
-        userClientHelper.mockUserInfo(userId);
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
 
         MvcResult mvcResult = mockMvc.perform(post("/api/v1/categories")
                         .content(objectMapper.writeValueAsString(requestDto))

@@ -1,5 +1,6 @@
 package com.prorenta.financeservice.service.impl.module_tests.TransactionServiceImplModuleTest;
 
+import com.prorenta.financeservice.security.CurrentUserProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.prorenta.financeservice.controller.impl.TransactionControllerImpl;
 import com.prorenta.financeservice.exception.GlobalExceptionHandler;
@@ -8,7 +9,6 @@ import com.prorenta.financeservice.factory.CategoryDataFactory;
 import com.prorenta.financeservice.factory.CurrencyDataFactory;
 import com.prorenta.financeservice.factory.TransactionDataFactory;
 import com.prorenta.financeservice.factory.UserInfoDataFactory;
-import com.prorenta.financeservice.integration.UserFeignClient;
 import com.prorenta.financeservice.mapper.TransactionMapperImpl;
 import com.prorenta.financeservice.model.dto.ErrorDto;
 import com.prorenta.financeservice.model.dto.TransactionResponseDto;
@@ -68,7 +68,7 @@ public class UpdateTransactionServiceImplModuleTest {
     private CurrencyService currencyService;
 
     @MockitoBean
-    private UserFeignClient userFeignClient;
+    private CurrentUserProvider currentUserProvider;
 
     @Test
     @SneakyThrows
@@ -76,10 +76,10 @@ public class UpdateTransactionServiceImplModuleTest {
     public void updateTransactionSuccessfully() {
         UUID transactionId = UUID.randomUUID();
         UserInfoDto userInfo = UserInfoDataFactory.createDefaultUserInfoDto();
-        Category category = CategoryDataFactory.createDefaultCategory(userInfo.id());
+        Category category = CategoryDataFactory.createDefaultCategory(userInfo.userId());
         Currency currency = CurrencyDataFactory.createDefaultCurrency();
 
-        Transaction existingTransaction = TransactionDataFactory.createDefaultTransaction(userInfo.id(), category, currency);
+        Transaction existingTransaction = TransactionDataFactory.createDefaultTransaction(userInfo.userId(), category, currency);
         existingTransaction.setId(transactionId);
 
         UpdateTransactionRequestDto requestDto = UpdateTransactionRequestDto.builder()
@@ -87,12 +87,14 @@ public class UpdateTransactionServiceImplModuleTest {
                 .description("Новое описание")
                 .build();
 
-        Transaction updatedTransaction = TransactionDataFactory.createDefaultTransaction(userInfo.id(), category, currency);
+        Transaction updatedTransaction = TransactionDataFactory.createDefaultTransaction(userInfo.userId(), category, currency);
         updatedTransaction.setId(transactionId);
         updatedTransaction.setAmount(requestDto.amount());
         updatedTransaction.setDescription(requestDto.description());
 
-        Mockito.when(transactionRepository.findActiveTransactionById(transactionId))
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
+        Mockito.when(transactionRepository.findActiveTransactionByIdAndUserId(transactionId, currentUserProvider.getCurrentUserId()))
                 .thenReturn(Optional.of(existingTransaction));
         Mockito.when(transactionRepository.save(Mockito.any(Transaction.class)))
                 .thenReturn(updatedTransaction);
@@ -122,7 +124,9 @@ public class UpdateTransactionServiceImplModuleTest {
         UpdateTransactionRequestDto requestDto = UpdateTransactionRequestDto.builder().build();
         String errorMessage = "Транзакция с id=" + transactionId + " не найдена";
 
-        Mockito.when(transactionRepository.findActiveTransactionById(transactionId))
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
+        Mockito.when(transactionRepository.findActiveTransactionByIdAndUserId(transactionId, currentUserProvider.getCurrentUserId()))
                 .thenThrow(new TransactionNotFoundException(errorMessage));
 
         MvcResult mvcResult = mockMvc.perform(patch("/api/v1/transactions/{id}", transactionId)
@@ -144,6 +148,9 @@ public class UpdateTransactionServiceImplModuleTest {
     @SneakyThrows
     @DisplayName("Обновление транзакции: ошибка 400 (Невалидный формат UUID)")
     public void updateTransactionInvalidUuidFormat() {
+        Mockito.when(currentUserProvider.getCurrentUserId())
+                .thenReturn(UserInfoDataFactory.DEFAULT_USER_ID);
+
         MvcResult mvcResult = mockMvc.perform(patch("/api/v1/transactions/{id}", "invalid-uuid")
                         .content("{}")
                         .contentType(MediaType.APPLICATION_JSON)
